@@ -9,7 +9,7 @@ This is a high level overview of how to use the Cloudera Data Warehouse service 
 
 ER - Diagram of the demo: fact table flights (86mio rows) and dimension tables: airlines (1.5k rows), airports (3.3k rows) and planes (5k rows)
 
-![](images/Aspose.Words.985e7a47-18d3-478e-a34f-e06ba8982d99.002.png)
+![](/images/Aspose.Words.985e7a47-18d3-478e-a34f-e06ba8982d99.002.png)
 
 ## Lab Setup
 
