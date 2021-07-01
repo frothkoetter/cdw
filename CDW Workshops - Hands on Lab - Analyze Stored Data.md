@@ -592,23 +592,74 @@ In the Ranger UI, select the “Audit” menu and limit the amount of data displ
 |<p>-- Start the creation process for a Hive VW and see the **“Query Isolation” option.**</p><p>-- No need to continue to create the VW.</p>|
 | :- |
 
+### Data Sketches
 
-1. Run example for Data Sketches. 
+Create a table for data sketch columns
+```sql
+drop table if exists airlinedata.flights_airlines_sk;
 
-|<p></p><p>USE DB\_USER001; </p><p></p><p>drop table if exists airlinedata.flights\_airlines\_sk;</p><p></p><p>create table airlinedata.flights\_airlines\_sk as</p><p>select flights\_orc\_partitioned.uniquecarrier AS airline\_code,</p><p>` `count(1) as sum\_flights,</p><p>` `sketch.qt\_data2sketch(cast(arrdelay as double)) as sk\_arrdelay</p><p>FROM airlinedata.flights\_orc</p><p>where arrdelay > 0</p><p>GROUP BY uniquecarrier;</p><p>							</p><p></p><p>select airline\_code,sum\_flights,sum\_arrdelay,</p><p>`	  `sketch.qt\_getPmf(sk\_arrdelay,10,20,30,40,50,60,70,80,90,100),			</p><p>`	  `sketch.qt\_getCdf(sk\_arrdelay,10,20,30,40,50,60,70,80,90,100),</p><p>`	  `sketch.qt\_getK(sk\_arrdelay),						</p><p>`	  `sketch.qt\_getN(sk\_arrdelay)	</p><p>from airlinedata.flights\_airlines\_sk</p><p>group by airline\_code</p><p>			</p><p></p><p></p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.094.png)</p><p></p><p></p><p></p><p>drop view if exists airlinedata.vw\_flights\_sk\_airlines;</p><p>create view airlinedata.vw\_flights\_sk\_airlines as					</p><p>select airline\_code, </p><p>`   `sum\_flights, sum\_arrdelay, min\_arrdelay, max\_arrdelay, avg\_arrdelay,</p><p>`   `sketch.qt\_getQuantile(sk\_arrdelay,0.1) as arrival\_delay\_10,</p><p>`   `sketch.qt\_getQuantile(sk\_arrdelay,0.2) as arrival\_delay\_20,</p><p>`   `sketch.qt\_getQuantile(sk\_arrdelay,0.3) as arrival\_delay\_30,</p><p>`   `sketch.qt\_getQuantile(sk\_arrdelay,0.4) as arrival\_delay\_40,</p><p>`   `sketch.qt\_getQuantile(sk\_arrdelay,0.5) as arrival\_delay\_50,</p><p>`   `sketch.qt\_getQuantile(sk\_arrdelay,0.6) as arrival\_delay\_60,</p><p>`   `sketch.qt\_getQuantile(sk\_arrdelay,0.7) as arrival\_delay\_70,</p><p>`   `sketch.qt\_getQuantile(sk\_arrdelay,0.8) as arrival\_delay\_80,</p><p>`   `sketch.qt\_getQuantile(sk\_arrdelay,0.9) as arrival\_delay\_90,</p><p>`   `sketch.qt\_getQuantile(sk\_arrdelay,1.0) as arrival\_delay\_100</p><p>from airlinedata.flights\_airlines\_sk;</p><p></p><p>select \* from airlinedata.vw\_flights\_sk\_airlines;</p><p>							</p><p>										  </p>|
-| :- |
+create table airlinedata.flights_airlines_sk as
+select flights_orc_partitioned.uniquecarrier AS airline_code,
+ count(1) as sum_flights,
+ sketch.qt_data2sketch(cast(arrdelay as double)) as sk_arrdelay
+FROM airlinedata.flights_orc
+where arrdelay > 0
+GROUP BY uniquecarrier;
+							
+```
+Fast retrieval a few rows 
+```sql
+select airline_code,sum_flights,sum_arrdelay,
+	  sketch.qt_getPmf(sk_arrdelay,10,20,30,40,50,60,70,80,90,100),			
+	  sketch.qt_getCdf(sk_arrdelay,10,20,30,40,50,60,70,80,90,100),
+	  sketch.qt_getK(sk_arrdelay),						
+	  sketch.qt_getN(sk_arrdelay)	
+from airlinedata.flights_airlines_sk
+group by airline_code
+```
 
-`             `PDF / CDF - Airline Histogram 
+![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.094.png)
 
-`	`Create Distribution Histograms (here as Excel) 
+```sql
+drop view if exists airlinedata.vw_flights_sk_airlines;
+create view airlinedata.vw_flights_sk_airlines as					
+select airline_code, 
+   sum_flights, sum_arrdelay, min_arrdelay, max_arrdelay, avg_arrdelay,
+   sketch.qt_getQuantile(sk_arrdelay,0.1) as arrival_delay_10,
+   sketch.qt_getQuantile(sk_arrdelay,0.2) as arrival_delay_20,
+   sketch.qt_getQuantile(sk_arrdelay,0.3) as arrival_delay_30,
+   sketch.qt_getQuantile(sk_arrdelay,0.4) as arrival_delay_40,
+   sketch.qt_getQuantile(sk_arrdelay,0.5) as arrival_delay_50,
+   sketch.qt_getQuantile(sk_arrdelay,0.6) as arrival_delay_60,
+   sketch.qt_getQuantile(sk_arrdelay,0.7) as arrival_delay_70,
+   sketch.qt_getQuantile(sk_arrdelay,0.8) as arrival_delay_80,
+   sketch.qt_getQuantile(sk_arrdelay,0.9) as arrival_delay_90,
+   sketch.qt_getQuantile(sk_arrdelay,1.0) as arrival_delay_100
+from airlinedata.flights_airlines_sk;
+
+select * from airlinedata.vw_flights_sk_airlines;
+```
+
+PDF / CDF - Airline Histogram -  create Distribution Histograms (here as Excel) 
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.095.png)
 
 
-1. Count distinct with HLL algorithm  
+Count distinct with HLL algorithm  
 
 
-|<p>-- Optional step</p><p>-- how many unique flights we have</p><p></p><p>create table airlinedata.flights\_sketch as</p><p>select sketch.hll\_data2sketch( cast(concat(flights\_orc.uniquecarrier,flights\_orc.flightnum) as string) ) AS flightnum\_sk</p><p>FROM airlinedata.flights\_orc;</p><p></p><p>select sketch.hll\_estimate(flightnum\_sk)</p><p>from airlinedata.flights\_sketch;</p><p></p><p>Results</p><p>     </p>|
+Optional step how many unique flights 
+
+```sql
+create table airlinedata.flights_sketch as
+select sketch.hll_data2sketch( cast(concat(flights_orc.uniquecarrier,flights_orc.flightnum) as string) ) AS flightnum_sk
+FROM airlinedata.flights_orc;
+
+select sketch.hll_estimate(flightnum_sk)
+from airlinedata.flights_sketch;
+```
+
+<p>Results</p><p>     </p>|
 | :- |
 
 |44834.13712876354|
@@ -621,7 +672,12 @@ Explain - extreme fast query a table
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.096.png)
 
-|<p>-- alternative classic query would be</p><p>select count(distinct(cast(concat(flights\_orc.uniquecarrier,flights\_orc.flightnum) as string))) from airlinedata.flights\_orc;</p><p></p><p></p><p></p><p>Results</p><p>     </p>|
+alternative classic query would be
+
+```sql
+select count(distinct(cast(concat(flights\_orc.uniquecarrier,flights\_orc.flightnum) as string))) from airlinedata.flights_orc;
+```
+</p><p>Results</p><p>     </p>|
 | :- |
 
 |44684|
@@ -636,12 +692,25 @@ Explain - query full fact table with going over 86mio of the fact table
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.098.png)
 
-1. Needle in Haystack - most frequency items - or better not on Alaska Airline Flight - AS65
+#### Needle in Haystack - most frequency items - or better not on Alaska Airline Flight - AS65
 
+Optional step. Can be just a discussion
 
+What flights are most frequently cancelled
 
+```sql
+drop table if exists airlinedata.flights_frq_sketch; 					  
+create table airlinedata.flights_frq_sketch (cancelled int, sk_flightnum binary);
+insert into airlinedata.flights_frq_sketch 
+select flights_orc.cancelled, sketch.frq_data2sketch( cast(concat(flights_orc.uniquecarrier,flights_orc.flightnum) as string), 8192 )
+FROM airlinedata.flights_orc
+GROUP BY flights_orc.cancelled;
+							
+select sketch.frq_get_items(sk_flightnum, 'NO_FALSE_POSITIVES')
+from airlinedata.flights_frq_sketch;
+```
 
-|<p>-- Optional step. Can be just a discussion</p><p>-- What flights are most frequently cancelled </p><p></p><p>drop table if exists airlinedata.flights\_frq\_sketch; 					  </p><p>create table airlinedata.flights\_frq\_sketch (cancelled int, sk\_flightnum binary);</p><p>insert into airlinedata.flights\_frq\_sketch </p><p>select flights\_orc.cancelled, sketch.frq\_data2sketch( cast(concat(flights\_orc.uniquecarrier,flights\_orc.flightnum) as string), 8192 )</p><p>FROM airlinedata.flights\_orc</p><p>GROUP BY flights\_orc.cancelled;</p><p>							</p><p>-- frq\_get\_item is a UDTF . resultset is a sorted table</p><p>-- </p><p>select sketch.frq\_get\_items(sk\_flightnum, 'NO\_FALSE\_POSITIVES')</p><p>from airlinedata.flights\_frq\_sketch;</p><p></p><p></p><p>Results</p><p>     </p>|
+<p>Results</p><p>     </p>|
 | :- |
 
 |ITEM|ESTIMATE|LOWER\_BOUND|UPPER\_BOUND|
@@ -654,11 +723,16 @@ Explain - query full fact table with going over 86mio of the fact table
 | :- |
 
 
+validate the results
 
-
-
-|<p>-- validate the result</p><p></p><p>select concat(flights\_orc.uniquecarrier,flights\_orc.flightnum) as flight, </p><p>`       `count(1) as num\_cancelled</p><p>from airlinedata.flights\_orc </p><p>where flightnum = 65 and cancelled = 1</p><p>group by concat(flights\_orc.uniquecarrier,flights\_orc.flightnum)</p><p>order by num\_cancelled desc;</p><p>					  </p><p></p><p>Results</p><p>     </p>|
-| :- |
+```sql
+select concat(flights_orc.uniquecarrier,flights_orc.flightnum) as flight, 
+       count(1) as num_cancelled
+from airlinedata.flights_orc 
+where flightnum = 65 and cancelled = 1
+group by concat(flights_orc.uniquecarrier,flights_orc.flightnum)
+order by num_cancelled desc;
+```
 
 |FLIGHT|NUM\_CANCELLED|
 | :- | :- |
