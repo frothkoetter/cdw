@@ -40,7 +40,34 @@ USE DB_USER0***;
 
 1. Run DDL to create external tables on the CSV data files, which are already in cloud object storage.
 
-|<p></p><p>drop table if exists flights\_csv;</p><p>CREATE EXTERNAL TABLE flights\_csv(month int, dayofmonth int, </p><p>` `dayofweek int, deptime int, crsdeptime int, arrtime int, </p><p>` `crsarrtime int, uniquecarrier string, flightnum int, tailnum string, </p><p>` `actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int, </p><p>` `depdelay int, origin string, dest string, distance int, taxiin int, </p><p>` `taxiout int, cancelled int, cancellationcode string, diverted string, </p><p>` `carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, </p><p>lateaircraftdelay int) </p><p>ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' </p><p>STORED AS TEXTFILE LOCATION '/airlinedata-csv/flights' tblproperties("skip.header.line.count"="1");</p><p></p><p>drop table if exists planes\_csv;</p><p>CREATE EXTERNAL TABLE planes\_csv(tailnum string, owner\_type string, manufacturer string, issue\_date string, model string, status string, aircraft\_type string, engine\_type string, year int) </p><p>ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' </p><p>STORED AS TEXTFILE LOCATION '/airlinedata-csv/planes' tblproperties("skip.header.line.count"="1");</p><p></p><p>drop table if exists airlines\_csv;</p><p>CREATE EXTERNAL TABLE airlines\_csv(code string, description string) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' </p><p>STORED AS TEXTFILE LOCATION '/airlinedata-csv/airlines' tblproperties("skip.header.line.count"="1");</p><p></p><p>drop table if exists airports\_csv;</p><p>CREATE EXTERNAL TABLE airports\_csv(iata string, airport string, city string, state DOUBLE, country string, lat DOUBLE, lon DOUBLE) </p><p>ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' </p><p>STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.header.line.count"="1");</p>|
+```sql
+drop table if exists flights_csv;
+CREATE EXTERNAL TABLE flights_csv(month int, dayofmonth int, 
+ dayofweek int, deptime int, crsdeptime int, arrtime int, 
+ crsarrtime int, uniquecarrier string, flightnum int, tailnum string, 
+ actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int, 
+ depdelay int, origin string, dest string, distance int, taxiin int, 
+ taxiout int, cancelled int, cancellationcode string, diverted string, 
+ carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, 
+lateaircraftdelay int) 
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
+STORED AS TEXTFILE LOCATION '/airlinedata-csv/flights' tblproperties("skip.header.line.count"="1");
+
+drop table if exists planes_csv;
+CREATE EXTERNAL TABLE planes_csv(tailnum string, owner_type string, manufacturer string, issue_date string, model string, status string, aircraft_type string, engine_type string, year int) 
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
+STORED AS TEXTFILE LOCATION '/airlinedata-csv/planes' tblproperties("skip.header.line.count"="1");
+
+drop table if exists airlines_csv;
+CREATE EXTERNAL TABLE airlines_csv(code string, description string) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
+STORED AS TEXTFILE LOCATION '/airlinedata-csv/airlines' tblproperties("skip.header.line.count"="1");
+
+drop table if exists airports_csv;
+CREATE EXTERNAL TABLE airports_csv(iata string, airport string, city string, state DOUBLE, country string, lat DOUBLE, lon DOUBLE) 
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
+STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.header.line.count"="1");
+```
+
 | :- |
 
 1. Check that you created tables
