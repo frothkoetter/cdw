@@ -1,20 +1,18 @@
-﻿![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.001.jpeg)
 
 
-CDW Workshops - vHoL  
+# CDW Workshops - vHoL  
 
 Analyze Stored Data
+
 ## Introduction
 This is a high level overview of how to use the Cloudera Data Warehouse service to quickly explore raw data, create curated versions of the data for simple reporting and dashboarding, and then scale up usage of the curated data by exposing it to more users. It highlights the performance and automation capabilities that help ensure performance is maintained while controlling cost.  
 
 ER - Diagram of the demo: fact table flights (86mio rows) and dimension tables: airlines (1.5k rows), airports (3.3k rows) and planes (5k rows)
 
-![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.002.png)
+![](images/Aspose.Words.985e7a47-18d3-478e-a34f-e06ba8982d99.002.png)
+
 ## Lab Setup
 
-Login:
-
-User
 
 1. Ensure that you have set your workload password.
 
@@ -22,9 +20,6 @@ User
 |<p>Click on username in the bottom left, then Profile, then “Set Workload Password” link.</p><p>Then enter and confirm the password. Then “**Set Workload Password”**.</p>|
 | :- |
 
-```sh
-$ npm install --save copy
-```
 
 
 ## Lab 1 - Create Database
@@ -32,7 +27,12 @@ $ npm install --save copy
 
 1. Create new database to be used or use one that is already created for you
 
-|<p>-- Change the database name </p><p></p><p>CREATE DATABASE **DB\_USER001**;</p><p></p><p>USE **DB\_USER001**;</p>|
+```sql
+-- Change *** of database name
+CREATE DATABASE DB_USER0**;
+USE DB_USER0***;
+
+```
 | :- |
 
 -----
