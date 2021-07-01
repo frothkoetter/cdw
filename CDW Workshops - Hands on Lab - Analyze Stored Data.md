@@ -14,14 +14,14 @@ ER - Diagram of the demo: fact table flights (86mio rows) and dimension tables: 
 ## Lab Setup
 
 
-1. Ensure that you have set your workload password.
+Ensure that you have set your workload password.
 
 
 |<p>Click on username in the bottom left, then Profile, then “Set Workload Password” link.</p><p>Then enter and confirm the password. Then “**Set Workload Password”**.</p>|
 | :- |
 
 
-
+-----
 ## Lab 1 - Create Database
 *Do all these steps as the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
@@ -30,10 +30,9 @@ ER - Diagram of the demo: fact table flights (86mio rows) and dimension tables: 
 ```sql
 -- Change *** of database name
 CREATE DATABASE DB_USER0**;
-USE DB_USER0***;
+USE DB_USER0**;
 
 ```
-| :- |
 
 -----
 ## Lab 2 - External Tables
@@ -68,25 +67,90 @@ ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
 STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.header.line.count"="1");
 ```
 
-| :- |
 
-1. Check that you created tables
+Check that you created tables
 
-|<p>**use DB\_USER001;**</p><p></p><p>show tables;</p><p></p>|
-| :- |
+```sql
+USE DB_USER0**;
+SHOW TABLES;
+```
 
 
 |<p>**Results**</p><p></p><p>TAB\_NAME</p><p>airlines\_csv</p><p>airports\_csv</p><p>flights\_csv</p><p>planes\_csv</p><p></p>|
 | :- |
 
 
-1. Run exploratory queries to understand the data. This reads the CSV data, converts it into a columnar in-memory format, and executes the query.
 
-|<p>-- NAME: Airline Delay Aggregate Metrics by Airplane</p><p>-- DESCRIPTION: Customer Experience Reporting - Report showing airplanes that have the</p><p>-- highest average delays, causing the worst customer experience.</p><p></p><p>**USE DB\_USER001;**</p><p></p><p>SELECT tailnum,</p><p>`       `count(\*),</p><p>`       `avg(depdelay) AS avg\_delay,</p><p>`       `max(depdelay),</p><p>`       `avg(taxiout),</p><p>`       `avg(cancelled),</p><p>`       `avg(weatherdelay),</p><p>`       `max(weatherdelay),</p><p>`       `avg(nasdelay),</p><p>`       `max(nasdelay),</p><p>`       `avg(securitydelay),</p><p>`       `max(securitydelay),</p><p>`       `avg(lateaircraftdelay),</p><p>`       `max(lateaircraftdelay),</p><p>`       `avg(airtime),</p><p>`       `avg(actualelapsedtime),</p><p>`       `avg(distance)</p><p>FROM flights\_csv</p><p>GROUP BY tailnum</p><p>ORDER BY avg\_delay DESC;</p><p></p><p></p><p>-- NAME: Engine Types Causing Most Delays</p><p>-- DESCRIPTION: Ad Hoc Exploration to Investigate - Exploratory query to </p><p>-- determine which engine type contributes to the most delayed flights.</p><p>-- If this returns no results, then remove the 'WHERE tailnum in …' clause</p><p></p><p></p><p>SELECT model,</p><p>`       `engine\_type</p><p>FROM planes\_csv</p><p>WHERE planes\_csv.tailnum IN</p><p>`    `(SELECT tailnum</p><p>`     `FROM</p><p>`       `(SELECT tailnum,</p><p>`               `count(\*),</p><p>`               `avg(depdelay) AS avg\_delay,</p><p>`               `max(depdelay),</p><p>`               `avg(taxiout),</p><p>`               `avg(cancelled),</p><p>`               `avg(weatherdelay),</p><p>`               `max(weatherdelay),</p><p>`               `avg(nasdelay),</p><p>`               `max(nasdelay),</p><p>`               `avg(securitydelay),</p><p>`               `max(securitydelay),</p><p>`               `avg(lateaircraftdelay),</p><p>`               `max(lateaircraftdelay),</p><p>`               `avg(airtime),</p><p>`               `avg(actualelapsedtime),</p><p>`               `avg(distance)</p><p>`        `FROM flights\_csv</p><p>`        `WHERE tailnum IN ('N194JB',</p><p>`                          `'N906S',</p><p>`                          `'N575ML',</p><p>`                          `'N852NW',</p><p>`                          `'N000AA')</p><p>`        `GROUP BY tailnum) AS delays);</p>|
-| :- |
+Run exploratory queries to understand the data. This reads the CSV data, converts it into a columnar in-memory format, and executes the query.
+
+NAME: Airline Delay Aggregate Metrics by Airplane
+
+DESCRIPTION: Customer Experience Reporting showing airplanes that have the highest average delays, causing the worst customer experience.
+
+*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
+
+```sql
+SELECT tailnum,
+       count(*),
+       avg(depdelay) AS avg_delay,
+       max(depdelay),
+       avg(taxiout),
+       avg(cancelled),
+       avg(weatherdelay),
+       max(weatherdelay),
+       avg(nasdelay),
+       max(nasdelay),
+       avg(securitydelay),
+       max(securitydelay),
+       avg(lateaircraftdelay),
+       max(lateaircraftdelay),
+       avg(airtime),
+       avg(actualelapsedtime),
+       avg(distance)
+FROM flights_csv
+GROUP BY tailnum
+ORDER BY avg_delay DESC;
+```
+
+NAME: Engine Types Causing Most Delays
+DESCRIPTION: Ad Hoc Exploration to Investigate - Exploratory query to determine which engine type contributes to the most delayed flights.
+
+NOTE: If this returns no results, then remove the 'WHERE tailnum in …' clause
 
 
+```sql
+SELECT model,
+       engine_type
+FROM planes_csv
+WHERE planes_csv.tailnum IN
+    (SELECT tailnum
+     FROM
+       (SELECT tailnum,
+               count(*),
+               avg(depdelay) AS avg_delay,
+               max(depdelay),
+               avg(taxiout),
+               avg(cancelled),
+               avg(weatherdelay),
+               max(weatherdelay),
+               avg(nasdelay),
+               max(nasdelay),
+               avg(securitydelay),
+               max(securitydelay),
+               avg(lateaircraftdelay),
+               max(lateaircraftdelay),
+               avg(airtime),
+               avg(actualelapsedtime),
+               avg(distance)
+        FROM flights_csv
+        WHERE tailnum IN ('N194JB',
+                          'N906S',
+                          'N575ML',
+                          'N852NW',
+                          'N000AA')
+        GROUP BY tailnum) AS delays);
 
+```
 -----
 ## Lab 3 - Managed Tables
 
@@ -94,14 +158,31 @@ STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.head
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
+```sql
+drop table if exists airlines_orc;
+create table airlines_orc as select * from airlines_csv;
 
-|<p>**USE DB\_USER001**</p><p></p><p>drop table if exists airlines\_orc;</p><p>create table airlines\_orc as select \* from airlines\_csv;</p><p></p><p>drop table if exists airports\_orc;</p><p>create table airports\_orc as select \* from airports\_csv;</p><p></p><p>drop table if exists planes\_orc;</p><p>create table planes\_orc as select \* from planes\_csv;</p><p></p><p>drop table if exists flights\_orc;</p><p>create table flights\_orc partitioned by (month) as </p><p>select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay </p><p>from flights\_csv;</p><p></p><p></p><p></p>|
-| :- |
+drop table if exists airports_orc;
+create table airports_orc as select * from airports_csv;
 
-1. Check that you created managed & external tables
+drop table if exists planes_orc;
+create table planes_orc as select * from planes_csv;
 
-|<p>use **DB\_USER001;**</p><p></p><p>show tables;</p>|
-| :- |
+drop table if exists flights_orc;
+create table flights_orc partitioned by (month) as 
+select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
+from flights_csv;
+
+```
+
+This takes a few minutes!
+
+Check that you created managed & external tables
+
+```sql
+USE DB_USER0**;
+SHOW TABLES;
+```
 
 
 |<p>Results</p><p></p><p>TAB\_NAME</p><p>airlines\_csv</p><p>airlines\_orc</p><p>airports\_csv</p><p>airports\_orc</p><p>flights\_csv</p><p>flights\_orc</p><p>planes\_csv</p><p>planes\_orc</p>|
@@ -109,46 +190,140 @@ STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.head
 
 
 
-1. Experiment with different queries to see effects of the data cache on each executor.
+Experiment with different queries to see effects of the data cache on each executor.
 
-|<p>-- Run query. Highlight both “SET …” and “SELECT …” when you execute.</p><p>SET hive.query.results.cache.enabled=false;</p><p></p><p></p><p>SELECT</p><p>`  `SUM(flights.cancelled) AS num\_flights\_cancelled,</p><p>`  `SUM(1) AS total\_num\_flights,</p><p>`  `MIN(airlines.description) AS airline\_name,</p><p>`  `airlines.code AS airline\_code</p><p>FROM</p><p>`  `flights\_orc flights</p><p>`  `JOIN airlines\_orc airlines ON (flights.uniquecarrier = airlines.code)</p><p>GROUP BY</p><p>`  `airlines.code</p><p>ORDER BY</p><p>`  `num\_flights\_cancelled DESC;</p><p></p><p>-- Go to Queries page, then click on the query that just ran, then scroll down to DAG INFO,</p><p>-- then choose DAG COUNTERS, then filter for 'cache', then show CACHE\_MISS\_BYTES and/or </p><p>-- CACHE\_HIT\_BYTES. Take note of the query run time too.</p><p></p><p>-- Note that sometimes it takes up to a few minutes for DAS to parse the </p><p>-- query metrics and expose them in the UI.</p><p></p><p>-- Run query again</p><p>-- then check the cache metrics again to see the improved hit rate.</p>|
-| :- |
+Run query. Highlight both “SET …” and “SELECT …” when you execute.
 
+```sql
+SET hive.query.results.cache.enabled=false;
 
+SELECT
+  SUM(flights.cancelled) AS num_flights_cancelled,
+  SUM(1) AS total_num_flights,
+  MIN(airlines.description) AS airline_name,
+  airlines.code AS airline_code
+FROM
+  flights_orc flights
+  JOIN airlines_orc airlines ON (flights.uniquecarrier = airlines.code)
+GROUP BY
+  airlines.code
+ORDER BY
+  num_flights_cancelled DESC;
+```
+
+Go to Queries page, then click on the query that just ran, then scroll down to DAG INFO,
+choose DAG COUNTERS, then filter for 'cache', then show CACHE_MISS_BYTES and/or CACHE_HIT_BYTES. 
+Take note of the query run time too.
+
+Note:  sometimes it takes up to a few minutes for DAS to parse the query metrics and expose them in the UI.
+
+Run query again.
+Check the cache metrics again to see the improved hit rate.
 
 
 -----
 ## Lab 4 - Materialized View
 
-1. Create materialized view (MV). This will cause Hive to transparently rewrite queries, when possible, to use the MV instead of the base tables.
+Create materialized view (MV). This will cause Hive to transparently rewrite queries, when possible, to use the MV instead of the base tables.
+
+Add constraints for better query and refresh 
+```sql
+ALTER TABLE airlines_orc ADD CONSTRAINT airlines_pk PRIMARY KEY (code) DISABLE NOVALIDATE;
+ALTER TABLE flights_orc ADD CONSTRAINT airlines_fk FOREIGN KEY (uniquecarrier) REFERENCES airlines_orc(code) DISABLE NOVALIDATE RELY;
+```
+### Create Materialized View
+```sql
+DROP MATERIALIZED VIEW IF EXISTS traffic_cancel_airlines
+CREATE MATERIALIZED VIEW traffic_cancel_airlines
+as SELECT airlines.code AS code,  MIN(airlines.description) AS description,
+          flights.month AS month,
+          sum(flights.cancelled) AS cancelled,
+          count(flights.diverted) AS diverted
+FROM flights_orc flights JOIN airlines_orc airlines ON (flights.uniquecarrier = airlines.code)
+group by airlines.code, flights.month;
+```
+
+Modify the DB_USER0**
+
+Check that the Materialized view is created
+```sql
+SHOW MATERIALIZED VIEWS in DB_USER0**;
+```
 
 
-|<p>USE **DB\_USER001**;</p><p></p><p>-- add required constraints</p><p></p><p>ALTER TABLE airlines\_orc ADD CONSTRAINT airlines\_pk PRIMARY KEY (code) DISABLE NOVALIDATE;</p><p>ALTER TABLE flights\_orc ADD CONSTRAINT airlines\_fk FOREIGN KEY (uniquecarrier) REFERENCES airlines\_orc(code) DISABLE NOVALIDATE RELY;</p><p></p><p>-- create MV</p><p></p><p>DROP MATERIALIZED VIEW IF EXISTS traffic\_cancel\_airlines</p><p>CREATE MATERIALIZED VIEW traffic\_cancel\_airlines</p><p>as SELECT airlines.code AS code,  MIN(airlines.description) AS description,</p><p>`          `flights.month AS month,</p><p>`          `sum(flights.cancelled) AS cancelled,</p><p>`          `count(flights.diverted) AS diverted</p><p>FROM flights\_orc flights JOIN airlines\_orc airlines ON (flights.uniquecarrier = airlines.code)</p><p>group by airlines.code, flights.month;</p><p></p><p>-- show MV</p><p>SHOW MATERIALIZED VIEWS in **DB\_USER001;**</p><p></p>|
-| :- |
+### Incremental refresh the materialized View
 
-1. Incremental refresh the materialized View
+*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
+
+First create a table for incremental data 
+
+```sql
+
+drop table if exists flights_orc_incr;
+
+create table flights_orc_incr
+(dayofmonth int, dayofweek int, deptime int, crsdeptime int, arrtime int, 
+ crsarrtime int, uniquecarrier string, flightnum int, tailnum string, 
+ actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int, 
+ depdelay int, origin string, dest string, distance int, taxiin int, 
+ taxiout int, cancelled int, cancellationcode string, diverted string, 
+ carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, 
+ lateaircraftdelay int)
+PARTITIONED BY (month int);
+```
+Now insert 1000 records as a new month 
+
+```sql
+
+insert into flights_orc_incr select 15 as month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
+from flights_orc limit 1000;
+```
+
+Insert the new data into fact table
+
+```sql
+INSERT into flights_orc select * from flights_orc_incr;
+```
+
+Update materialized view
+
+```sql
+USE DB_USER001;
+ALTER MATERIALIZED VIEW traffic_cancel_airlines REBUILD;
+```
 
 
-|<p>-- generate 1000 rows as new arrival data </p><p>USE DB\_USER001;</p><p></p><p>drop table if exists flights\_orc\_incr;</p><p>create table flights\_orc\_incr</p><p>(dayofmonth int, dayofweek int, deptime int, crsdeptime int, arrtime int, </p><p>` `crsarrtime int, uniquecarrier string, flightnum int, tailnum string, </p><p>` `actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int, </p><p>` `depdelay int, origin string, dest string, distance int, taxiin int, </p><p>` `taxiout int, cancelled int, cancellationcode string, diverted string, </p><p>` `carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, </p><p>` `lateaircraftdelay int)</p><p>PARTITIONED BY (month int);</p><p></p><p>use DB\_USER001;</p><p>insert into flights\_orc\_incr select 15 as month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay </p><p>from flights\_orc limit 1000;</p><p></p><p>USE DB\_USER001;</p><p>Insert into flights\_orc select \* from flights\_orc\_incr;</p><p></p><p>-- update materialized view</p><p>USE DB\_USER001;</p><p>ALTER MATERIALIZED VIEW traffic\_cancel\_airlines REBUILD;</p><p></p><p></p>|
-| :- |
+Run dashboard query again to explore the usage of the MV. 
 
+```sql
+SET hive.query.results.cache.enabled=false;
 
-1. Run dashboard query again to explore the usage of the MV. 
+SELECT airlines.code AS code,  MIN(airlines.description) AS description,
+          flights.month AS month,
+          sum(flights.cancelled) AS cancelled
+FROM flights_orc flights , airlines_orc airlines 
+WHERE flights.uniquecarrier = airlines.code
+group by airlines.code, flights.month;
+```
 
-
-|<p></p><p>-- query cancelled flights by airline</p><p></p><p>USE DB\_USER001;</p><p>SET hive.query.results.cache.enabled=false;</p><p>SELECT airlines.code AS code,  MIN(airlines.description) AS description,</p><p>`          `flights.month AS month,</p><p>`          `sum(flights.cancelled) AS cancelled</p><p>FROM flights\_orc flights , airlines\_orc airlines </p><p>WHERE flights.uniquecarrier = airlines.code</p><p>group by airlines.code, flights.month;</p><p></p><p>-- Disable materialized view rewrites</p><p>use DB\_USER001;</p><p>ALTER MATERIALIZED VIEW traffic\_cancel\_airlines DISABLE REWRITE;</p><p></p><p>-- Now repeat the first part of this step to see the different query plan, </p><p>-- which no longer uses the MV.</p>|
-| :- |
+Disable materialized view rewrites
+```sql
+ALTER MATERIALIZED VIEW traffic_cancel_airlines DISABLE REWRITE;
+```
+Now repeat the first part of this step to see the different query plan, which no longer uses the MV.
 
 Notice the difference in the explain 
 
 With query rewrite read the **materialized view** : 
 
-`   `![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.003.png)
+![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.003.png)
 
 No query rewrite: Read flights (86mio rows) and airlines (1.5k rows) with merge join, group and sort
 
-![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.004.png)
-## -----Lab 5 - Slowly Changing Dimensions (SCD) - TYPE 2
+![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.004.png)
+
+------
+## Lab 5 - Slowly Changing Dimensions (SCD) - TYPE 2
 
 ![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.005.png)
 
