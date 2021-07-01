@@ -26,7 +26,6 @@ You have to set your **workload password**.
 - [x] Click “**Set Workload Password”**
 
 
-
 -----
 ## Lab 1 - Create Database
 *Do all these steps as the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
