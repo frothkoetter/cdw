@@ -5,27 +5,34 @@
 Analyze Stored Data
 
 ## Introduction
-This is a high level overview of how to use the Cloudera Data Warehouse service to quickly explore raw data, create curated versions of the data for simple reporting and dashboarding, and then scale up usage of the curated data by exposing it to more users. It highlights the performance and automation capabilities that help ensure performance is maintained while controlling cost.  
+This workshop gives you an overview of how to use the Cloudera Data Warehouse service to quickly explore raw data, create curated versions of the data for reporting and dashboarding, and then scale up usage of the curated data by exposing it to more users. It highlights the performance and automation capabilities that help ensure performance is maintained while controlling cost.  
 
-ER - Diagram of the demo: fact table flights (86mio rows) and dimension tables: airlines (1.5k rows), airports (3.3k rows) and planes (5k rows)
+Enitiy-Relation Diagram of tables we use in todays workshop: 
+- fact table: flights (86mio rows) 
+- dimension tables: airlines (1.5k rows), airports (3.3k rows) and planes (5k rows)
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.002.png)
 
 ## Lab Setup
 
 
-Ensure that you have set your workload password.
 
+You have to set your **workload password**.
 
-|<p>Click on username in the bottom left, then Profile, then “Set Workload Password” link.</p><p>Then enter and confirm the password. Then “**Set Workload Password”**.</p>|
-| :- |
+- [x] Click on username in the bottom left
+- [x] Click Profile
+- [x] Click “Set Workload Password” link
+- [x] Then enter and confirm the password
+- [x] Click “**Set Workload Password”**
 
 
 -----
 ## Lab 1 - Create Database
 *Do all these steps as the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
-1. Create new database to be used or use one that is already created for you
+Navigate to Data Warehouse, then Virtual Warehouse and open the SQL Authoring tool DAS or HUE.
+ 
+Create new database for your user to be used, or use one that is already created for you.
 
 ```sql
 -- Change *** of database name
@@ -37,7 +44,7 @@ USE DB_USER0**;
 -----
 ## Lab 2 - External Tables
 
-1. Run DDL to create external tables on the CSV data files, which are already in cloud object storage.
+Run DDL to create four external tables on the CSV data files, which are already in cloud object storage.
 
 ```sql
 drop table if exists flights_csv;
@@ -76,9 +83,15 @@ SHOW TABLES;
 ```
 
 
-|<p>**Results**</p><p></p><p>TAB\_NAME</p><p>airlines\_csv</p><p>airports\_csv</p><p>flights\_csv</p><p>planes\_csv</p><p></p>|
-| :- |
+Results
 
+
+|TAB_NAME|
+| :- |
+|airlines_csv|
+|airports_csv|
+|flights_csv|
+|planes_csv|
 
 
 Run exploratory queries to understand the data. This reads the CSV data, converts it into a columnar in-memory format, and executes the query.
@@ -154,7 +167,7 @@ WHERE planes_csv.tailnum IN
 -----
 ## Lab 3 - Managed Tables
 
-1. Run “CREATE TABLE AS SELECT” queries to create full ACID ORC type of the tables. This creates curated versions of the data which are optimal for BI usage.
+Run “CREATE TABLE AS SELECT” queries to create full ACID ORC type of the tables. This creates curated versions of the data which are optimal for BI usage.
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
@@ -184,9 +197,19 @@ USE DB_USER0**;
 SHOW TABLES;
 ```
 
+Results
 
-|<p>Results</p><p></p><p>TAB\_NAME</p><p>airlines\_csv</p><p>airlines\_orc</p><p>airports\_csv</p><p>airports\_orc</p><p>flights\_csv</p><p>flights\_orc</p><p>planes\_csv</p><p>planes\_orc</p>|
+
+|TAB_NAME|
 | :- |
+|airlines_csv|
+|airlines_orc|
+|airports_csv|
+|airports_orc|
+|flights_csv|
+|flights_orc|
+|planes_csv|
+|planes_orc|
 
 
 
@@ -526,8 +549,8 @@ In the Ranger UI, select the “Audit” menu and limit the amount of data displ
 `	`Open DataViz 
 
 
-|**Step**|**Description**|||
-| :-: | :- | :- | :- |
+|**Step**|**Description**|
+| :-: | :- |
 |1|<p>Open Data Visualization ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.016.png)</p><p></p><p></p><p>SSO login as user with password (not prompted) </p><p></p>|
 |2|<p>Overview</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.017.png)</p>|
 |3|<p>Switch to Data Tab</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.018.png)</p><p>Initially will have no Data Models</p>|
