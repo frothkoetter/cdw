@@ -75,14 +75,9 @@ USE DB_USER0**;
 SHOW TABLES;
 ```
 
-Results
 
-|TAB_NAME|
+|<p>**Results**</p><p></p><p>TAB\_NAME</p><p>airlines\_csv</p><p>airports\_csv</p><p>flights\_csv</p><p>planes\_csv</p><p></p>|
 | :- |
-|airlines_csv|
-|airports_csv|
-|flights_csv|
-|planes_csv|
 
 
 
@@ -190,18 +185,8 @@ SHOW TABLES;
 ```
 
 
-Results
-
-|TAB_NAME|
+|<p>Results</p><p></p><p>TAB\_NAME</p><p>airlines\_csv</p><p>airlines\_orc</p><p>airports\_csv</p><p>airports\_orc</p><p>flights\_csv</p><p>flights\_orc</p><p>planes\_csv</p><p>planes\_orc</p>|
 | :- |
-|airlines_csv|
-|airlines_orc|
-|airports_csv|
-|airports_orc|
-|flights_csv|
-|flights_orc|
-|planes_csv|
-|planes_orc|
 
 
 
@@ -568,8 +553,8 @@ In the Ranger UI, select the “Audit” menu and limit the amount of data displ
 ||
 | :- |
 
-|**Step**|**Description**|
-| :-: | :- | :- |
+|**Step**|**Description**|||
+| :-: | :- | :- | :- |
 |1|<p>Open Data Visualization ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.016.png)</p><p></p><p></p><p>SSO login as user with password (not prompted) </p><p></p>|
 |2|<p>Overview</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.017.png)</p>|
 |3|<p>Switch to Data Tab</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.018.png)</p><p>Initially will have no Data Models</p>|
@@ -725,8 +710,8 @@ select sketch.frq_get_items(sk_flightnum, 'NO_FALSE_POSITIVES')
 from airlinedata.flights_frq_sketch;
 ```
 
-Results
-
+<p>Results</p><p>     </p>|
+| :- |
 
 |ITEM|ESTIMATE|LOWER\_BOUND|UPPER\_BOUND|
 | :- | :- | :- | :- |
@@ -755,7 +740,7 @@ order by num_cancelled desc;
 |TW65|111|
 |US65|74|
 
-
+||
 | :- |
 
 
