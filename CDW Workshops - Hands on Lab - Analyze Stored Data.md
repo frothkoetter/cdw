@@ -224,6 +224,8 @@ Check the cache metrics again to see the improved hit rate.
 -----
 ## Lab 4 - Materialized View
 
+*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
+
 Create materialized view (MV). This will cause Hive to transparently rewrite queries, when possible, to use the MV instead of the base tables.
 
 Add constraints for better query and refresh 
@@ -325,21 +327,75 @@ No query rewrite: Read flights (86mio rows) and airlines (1.5k rows) with merge 
 ------
 ## Lab 5 - Slowly Changing Dimensions (SCD) - TYPE 2
 
-![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.005.png)
+![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.005.png)
+We create a new SDC table ***airline\_scd*** table and add columns valid\_from and valid\_to. Then loading the initial 1000 rows into this SDC table. 
 
-1. We create a new SDC table ***airline\_scd*** table and add columns valid\_from and valid\_to. Then loading the initial 1000 rows into this SDC table. 
+*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
 Next step is to mock up new data and change data in the table ***airlines\_stage***. 
 
 Finally merging these two tables with a single MERGE command to maintain the historical data and check the results.
 
+Create the Hive managed table for our contacts. We track a start and end date.
+```sql
+drop table if exists airlines_scd;
+create table airlines_scd(code string, description string, valid_from date, valid_to date);
+```
 
-|<p>use **db\_user001;**</p><p></p><p>-- Create the Hive managed table for our contacts. We track a start and end date.</p><p>drop table if exists airlines\_scd;</p><p>create table airlines\_scd(code string, description string, valid\_from date, valid\_to date);</p><p></p><p></p><p>-- Load initial by copy 1000 rows of current airlines table into the airlimanaged table, We hard code the valid\_from dates to the beginning of 2021</p><p>insert into airlines\_scd select \*, cast('2021-01-01' as date), cast(null as date) from airlines\_csv limit 1000;</p><p></p><p>-- Create an external table pointing to our complete airlines dataset (1491 records)</p><p>Drop table if exists airlines\_stage;</p><p>create table airlines\_stage as select \* from airlines\_csv;</p><p></p><p>-- Update a description to mockup a change in the dimension</p><p>update airlines\_stage set description ='SDC Demo Update' where code in ('02Q','04Q')</p><p></p><p></p><p>-- Perform the SCD type 2 </p><p>merge into airlines\_scd </p><p>using (</p><p>` `-- The base staging data.</p><p>` `select</p><p>`   `airlines\_stage.code as join\_key,</p><p>`   `airlines\_stage.\* from airlines\_stage</p><p>` `union all</p><p>` `-- Generate an extra row for changed records.</p><p>` `-- The null join\_key means it will be inserted.</p><p>` `select</p><p>`   `null, airlines\_stage.\*</p><p>` `from</p><p>`   `airlines\_stage join airlines\_scd on airlines\_stage.code = airlines\_scd.code</p><p>` `where</p><p>`   `( airlines\_stage.description <> airlines\_scd.description )</p><p>`   `and airlines\_scd.valid\_to is null</p><p>) sub</p><p>on sub.join\_key = airlines\_scd.code</p><p>when matched</p><p>` `and sub.description <> airlines\_scd.description </p><p>` `then update set valid\_to = current\_date()</p><p>when not matched</p><p>` `then insert values (sub.code, sub.description, current\_date(), null);</p><p></p><p></p><p>-- Confirm we now have 1493 records.</p><p>select count(\*) from airlines\_scd;</p><p></p><p></p><p>-- View the changed records </p><p>select \* from airlines\_scd where code in ('02Q','04Q')</p><p></p>|
-| :- |
+Load initial by copy 1000 rows of current airlines table into the airlimanaged table, We hard code the valid_from dates to the beginning of 2021
+```sql
+insert into airlines_scd select *, cast('2021-01-01' as date), cast(null as date) from airlines_csv limit 1000;
+```
+Create an external table pointing to our complete airlines dataset (1491 records)
+Drop table if exists airlines_stage;
+```sql
+create table airlines_stage as select * from airlines_csv;
+```
+Update a description to mockup a change in the dimension
+```sql
+update airlines_stage set description ='SDC Demo Update' where code in ('02Q','04Q')
+```
+
+Perform the SCD type 2 
+```sql
+merge into airlines_scd 
+using (
+ -- The base staging data.
+ select
+   airlines_stage.code as join_key,
+   airlines_stage.* from airlines_stage
+ union all
+ -- Generate an extra row for changed records.
+ -- The null join_key means it will be inserted.
+ select
+   null, airlines_stage.*
+ from
+   airlines_stage join airlines_scd on airlines_stage.code = airlines_scd.code
+ where
+   ( airlines_stage.description <> airlines_scd.description )
+   and airlines_scd.valid_to is null
+) sub
+on sub.join_key = airlines_scd.code
+when matched
+ and sub.description <> airlines_scd.description 
+ then update set valid_to = current_date()
+when not matched
+ then insert values (sub.code, sub.description, current_date(), null);
+```
+
+Confirm that te new data is updated, table should have 1493 records.
+
+```sql
+select count(*) from airlines_scd;
+```
+
+View the changed records 
+```sql
+select * from airlines_scd where code in ('02Q','04Q')
+```
 
 
 Results
-
 
 
 |AIRLINES\_SCD.CODE|AIRLINES\_SCD.DESCRIPTION|AIRLINES\_SCD.VALID\_FROM|AIRLINES\_SCD.VALID\_TO|
@@ -353,70 +409,112 @@ Results
 
 
 -----
-## Lab - Data Security & Governance 
+## Lab 6 - Data Security & Governance 
 
-1. The combination of the Data Warehouse with SDX offers a list of powerful features like rule-based masking columns based on a user’s role and/or group association or rule-based row filters. 
-   For this workshop we are going to explore Attribute-Based Access Control a.k.a. Tage-based security policies.
-1. First we are going to create a series of tables in your work database. 
-   In the SQL editor, select your database and run this script:
+The combination of the Data Warehouse with SDX offers a list of powerful features like rule-based masking columns based on a user’s role and/or group association or rule-based row filters. 
 
-|<p>-- In DAS, run the following query</p><p></p><p>CREATE TABLE emp\_fname (id int, fname string);</p><p>insert into emp\_fname(id, fname) values (1, 'Carl');</p><p>insert into emp\_fname(id, fname) values (2, 'Clarence');</p><p></p><p>CREATE TABLE emp\_lname (id int, lname string);</p><p>insert into emp\_lname(id, lname) values (1, 'Rickenbacker');</p><p>insert into emp\_lname(id, lname) values (2, 'Fender');</p><p></p><p>CREATE TABLE emp\_age (id int, age smallint);</p><p>insert into emp\_age(id, age) values (1, 35);</p><p>insert into emp\_age(id, age) values (2, 55);</p><p></p><p>CREATE TABLE emp\_denom (id int, denom char(2));</p><p>insert into emp\_denom(id, denom) values (1, 'rk');</p><p>insert into emp\_denom(id, denom) values (2, 'na');</p><p></p><p>CREATE TABLE emp\_id (id int, empid integer);</p><p>insert into emp\_id(id, empid) values (1, 1146651);</p><p>insert into emp\_id(id, empid) values (2, 239125);</p><p></p><p>CREATE TABLE emp\_all as</p><p>(select a.id, a.fname, b.lname, c.age, d.denom, e.empid from emp\_fname a</p><p>`	`inner join emp\_lname b on b.id = a.id</p><p>`	`inner join emp\_age c on c.id = b.id</p><p>`	`inner join emp\_denom d on d.id = c.id</p><p>`	`inner join emp\_id e on e.id = d.id);</p><p></p><p>create table emp\_younger as (select \* from emp\_all where emp\_all.age <= 45);</p><p></p><p>create table emp\_older as (select \* from emp\_all where emp\_all.age > 45);</p>|
-| :- |
+For this workshop we are going to explore Attribute-Based Access Control a.k.a. Tage-based security policies.
 
-1. After this script executes, a simple
+First we are going to create a series of tables in your work database. 
 
-|<p>-- In DAS, run the following query</p><p></p><p>select \* from emp\_all;</p>|
-| :- |
+In the SQL editor, select your database and run this script:
+
+```sql
+CREATE TABLE emp_fname (id int, fname string);
+insert into emp_fname(id, fname) values (1, 'Carl');
+insert into emp_fname(id, fname) values (2, 'Clarence');
+
+CREATE TABLE emp_lname (id int, lname string);
+insert into emp_lname(id, lname) values (1, 'Rickenbacker');
+insert into emp_lname(id, lname) values (2, 'Fender');
+
+CREATE TABLE emp_age (id int, age smallint);
+insert into emp_age(id, age) values (1, 35);
+insert into emp_age(id, age) values (2, 55);
+
+CREATE TABLE emp_denom (id int, denom char(2));
+insert into emp_denom(id, denom) values (1, 'rk');
+insert into emp_denom(id, denom) values (2, 'na');
+
+CREATE TABLE emp_id (id int, empid integer);
+insert into emp_id(id, empid) values (1, 1146651);
+insert into emp_id(id, empid) values (2, 239125);
+
+CREATE TABLE emp_all as
+(select a.id, a.fname, b.lname, c.age, d.denom, e.empid from emp_fname a
+	inner join emp_lname b on b.id = a.id
+	inner join emp_age c on c.id = b.id
+	inner join emp_denom d on d.id = c.id
+	inner join emp_id e on e.id = d.id);
+
+create table emp_younger as (select * from emp_all where emp_all.age <= 45);
+
+create table emp_older as (select * from emp_all where emp_all.age > 45);
+```
+
+After this script executes, a simple
+
+```sql
+select * from emp_all;
+```
+
 … should give the contents of the emp\_all table, which only has a couple of lines of data.
 
-1. For the next step we will switch to the UI of Atlas, the CDP component responsible for metadata management and governance: in the Cloudera Data Warehouse *Overview* UI, select your Virtual Warehouse to highlight the associated Database Catalog. Click on the three-dot menu of this DB catalog and select “Open Atlas” in the associated pop-up menu:
+For the next step we will switch to the UI of Atlas, the CDP component responsible for metadata management and governance: in the Cloudera Data Warehouse *Overview* UI, select your Virtual Warehouse to highlight the associated Database Catalog. Click on the three-dot menu of this DB catalog and select “Open Atlas” in the associated pop-up menu:
 
-![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.006.png)
+![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.006.png)
 
-1. This should open the Atlas UI. CDP comes with a newer, improved user interface which can be enabled through the “Switch to Beta UI” link on the bottom right side of the screen. Do this now.
-   The Atlas UI has a left column which lists the Entities, Classifications, Business Metadata and Glossaries that belong to your CDP Environment.
-   ![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.007.png)
-1. We just created a couple of tables in the Data Warehouse, let’s look at the associated metadata. Under “Entities”, click on “hive\_db”. This should produce a list of databases.
-1. Select you workshop database, this will result in the database’s metadata being displayed.
-1. Select the “Tables” tab (the rightmost)
-   ![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.008.png)
-1. Select the “emp\_all” table from the list, this will result in Atlas displaying the metadata for this table; select the “lineage” tab:
-   ![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.009.png)
-1. This lineage graph shows the inputs, outputs as well as the processing steps resulting from the execution of our SQL code in the Data Warehouse. Clicking on one of the nodes will display a popup menu, which allows us to navigate through the lineage graph.
+This should open the Atlas UI. CDP comes with a newer, improved user interface which can be enabled through the “Switch to Beta UI” link on the bottom right side of the screen. Do this now.
+
+The Atlas UI has a left column which lists the Entities, Classifications, Business Metadata and Glossaries that belong to your CDP Environment.
+
+![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.007.png)
+
+We just created a couple of tables in the Data Warehouse, let’s look at the associated metadata. Under “Entities”, click on “hive\_db”. This should produce a list of databases.
+Select you workshop database, this will result in the database’s metadata being displayed.
+
+Select the “Tables” tab (the rightmost)
+![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.008.png)
+
+Select the “emp\_all” table from the list, this will result in Atlas displaying the metadata for this table; select the “lineage” tab:
+   ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.009.png)
+This lineage graph shows the inputs, outputs as well as the processing steps resulting from the execution of our SQL code in the Data Warehouse. Clicking on one of the nodes will display a popup menu, which allows us to navigate through the lineage graph.
    Click on the “emp\_age” input table and select the link (the “guid” attribute) in the resulting popup menu:
-   ![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.010.png)
-1. In the screen that follows, select the “Schema” tab and in that table, click on the link for the “age” field:
-   ![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.011.png)
-1. [Explanation: we are now looking at the metadata page for the “age” column of the “emp\_age” table. There’s also a lineage tab here, because CDP tracks table- as well as column-based lineage for the Data Warehouse. 
-   What we want to do here: age is certainly a piece of sensitive personal information. We want to classify (‘tag’) it appropriately and then let SDX take care of treating this field as classified information that’s not visible to everyone.]
+   ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.010.png)
+
+In the screen that follows, select the “Schema” tab and in that table, click on the link for the “age” field:
+   ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.011.png)
+
+[Explanation: we are now looking at the metadata page for the “age” column of the “emp\_age” table. There’s also a lineage tab here, because CDP tracks table- as well as column-based lineage for the Data Warehouse. What we want to do here: age is certainly a piece of sensitive personal information. We want to classify (‘tag’) it appropriately and then let SDX take care of treating this field as classified information that’s not visible to everyone.]
+
    Still in the screen for the “age” column, click on the plus sign next to “Classifications”; this will bring up a dialog:
-   ![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.012.png)
+
+   ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.012.png)
    In the drop-down menu, select “PII” and make sure the “Propagate” checkbox is enabled.
    Click the “Add” button.
-1. [This effectively means we apply the classification “PII” to the selected column and Atlas also will apply that classification to all columns that have been or will be derived from it.]
-   We can actually check this easily by using the lineage graph to navigate to a downstream table’s column: select one of the nodes that *don’t* have gear wheels (those are process information) and select the guid link.
-1. This will give us the metadata for the “age” column in a derived table. Note the information on “Propagated Classifications”:
-   ![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.013.png)
-1. Try to query all columns from the “emp\_all” table again in DAS – by simply executing the last query again.
-1. Why did we get an error now? There exists a policy in Ranger that denies all members of the hands-on lab group access to Hive data that is classified as “PII”. Let’s check that out. Like before for Atlas, open the Ranger UI via the triple-dot menu in you warehouse’s Database Catalog: ![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.014.png)
-1. In the Ranger UI, select the “Audit” menu and limit the amount of data displayed by specifying the filter expressions:
+[This effectively means we apply the classification “PII” to the selected column and Atlas also will apply that classification to all columns that have been or will be derived from it.]
+
+We can actually check this easily by using the lineage graph to navigate to a downstream table’s column: select one of the nodes that *don’t* have gear wheels (those are process information) and select the guid link.
+
+This will give us the metadata for the “age” column in a derived table. Note the information on “Propagated Classifications”:
+   ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.013.png)
+Try to query all columns from the “emp\_all” table again in DAS – by simply executing the last query again.
+Why did we get an error now? There exists a policy in Ranger that denies all members of the hands-on lab group access to Hive data that is classified as “PII”. Let’s check that out. Like before for Atlas, open the Ranger UI via the triple-dot menu in you warehouse’s Database Catalog: ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.014.png)
+
+In the Ranger UI, select the “Audit” menu and limit the amount of data displayed by specifying the filter expressions:
    Result: Denied
    Service Type: HADOOP SQL
 
-![](Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.015.png)
-
-1. [tbd. Test the group mechanism, explain more]
-
+![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.015.png)
 
 
 -----
-## Lab - Data Visualization
+## Lab 7 - Data Visualization
 
 
 1. Use Data Visualization to further explore the data set.
 
 `	`Open DataViz 
-
 
 
 |**Step**|**Description**|||
