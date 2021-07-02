@@ -40,7 +40,10 @@ CREATE DATABASE DB_USER0**;
 USE DB_USER0**;
 
 ```
-
+Your can check your current database 
+```sql
+select current_database();
+```
 -----
 ## Lab 2 - External Tables
 
@@ -78,7 +81,6 @@ STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.head
 Check that you created tables
 
 ```sql
-USE DB_USER0**;
 SHOW TABLES;
 ```
 
@@ -577,15 +579,20 @@ In the Ranger UI, select the “Audit” menu and limit the amount of data displ
 
 -----
 ## (Optional Bonus Material)
-1. Run load test to simulate adding many more end users. Then view results of autoscaling. Discuss how autoscaling works, and how it allows for easy, cost-effective scaling. 
+Run load test to simulate adding many more end users. Then view results of autoscaling. Discuss how autoscaling works, and how it allows for easy, cost-effective scaling. 
 
 |-- Optional step. Can be just a discussion if no load test is actually done.|
 | :- |
 
-1. Discuss how workload aware autoscaling runs ETL style queries on dedicated executor group to not interfere with shorter queries. 
+Discuss how workload aware autoscaling runs ETL style queries on dedicated executor group to not interfere with shorter queries. 
 
 |<p>-- Start the creation process for a Hive VW and see the **“Query Isolation” option.**</p><p>-- No need to continue to create the VW.</p>|
 | :- |
+
+Clean Up 
+```sql
+DROP DATABASE DBB_USER0** CASCADE;
+```
 
 ### Data Sketches
 
