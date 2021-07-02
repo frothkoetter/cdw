@@ -96,7 +96,7 @@ Results
 
 Run exploratory queries to understand the data. This reads the CSV data, converts it into a columnar in-memory format, and executes the query.
 
-NAME: Airline Delay Aggregate Metrics by Airplane
+QUERY: Airline Delay Aggregate Metrics by Airplane
 
 DESCRIPTION: Customer Experience Reporting showing airplanes that have the highest average delays, causing the worst customer experience.
 
@@ -125,10 +125,8 @@ GROUP BY tailnum
 ORDER BY avg_delay DESC;
 ```
 
-NAME: Engine Types Causing Most Delays
+QUERY: Engine Types Causing Most Delays
 DESCRIPTION: Ad Hoc Exploration to Investigate - Exploratory query to determine which engine type contributes to the most delayed flights.
-
-NOTE: If this returns no results, then remove the 'WHERE tailnum in …' clause
 
 
 ```sql
@@ -164,6 +162,9 @@ WHERE planes_csv.tailnum IN
         GROUP BY tailnum) AS delays);
 
 ```
+NOTE: If this returns no results, then remove the 'WHERE tailnum in …' clause
+
+
 -----
 ## Lab 3 - Managed Tables
 
@@ -256,7 +257,7 @@ Add constraints for better query and refresh
 ALTER TABLE airlines_orc ADD CONSTRAINT airlines_pk PRIMARY KEY (code) DISABLE NOVALIDATE;
 ALTER TABLE flights_orc ADD CONSTRAINT airlines_fk FOREIGN KEY (uniquecarrier) REFERENCES airlines_orc(code) DISABLE NOVALIDATE RELY;
 ```
-### Create Materialized View
+Create Materialized View
 ```sql
 DROP MATERIALIZED VIEW IF EXISTS traffic_cancel_airlines
 CREATE MATERIALIZED VIEW traffic_cancel_airlines
@@ -268,15 +269,14 @@ FROM flights_orc flights JOIN airlines_orc airlines ON (flights.uniquecarrier = 
 group by airlines.code, flights.month;
 ```
 
-Modify the DB_USER0**
-
-Check that the Materialized view is created
+Check that the Materialized view is created.
+Replace ** in DB_USER0**
 ```sql
 SHOW MATERIALIZED VIEWS in DB_USER0**;
 ```
 
 
-### Incremental refresh the materialized View
+Incremental refresh the materialized View
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
@@ -296,7 +296,7 @@ create table flights_orc_incr
  lateaircraftdelay int)
 PARTITIONED BY (month int);
 ```
-Now insert 1000 records as a new month 
+Now insert 1000 records  
 
 ```sql
 
@@ -313,7 +313,6 @@ INSERT into flights_orc select * from flights_orc_incr;
 Update materialized view
 
 ```sql
-USE DB_USER001;
 ALTER MATERIALIZED VIEW traffic_cancel_airlines REBUILD;
 ```
 
