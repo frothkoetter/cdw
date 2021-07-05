@@ -127,6 +127,7 @@ GROUP BY tailnum
 ORDER BY avg_delay DESC;
 ```
 Note: Runtime approx. 10 minutes for the first run.
+
 Results
 
 |TAILNUM	| _C1|	AVG_DELAY|	_C3| _C4 |	_C5	| _C6 | _C7 | _C8 | _C9 | _C10	|_C11	| _C12	| _C13	| _C14 | _C15 |	_C16 |
@@ -608,6 +609,25 @@ Clean Up
 ```sql
 DROP DATABASE DBB_USER0** CASCADE;
 ```
+### Iceberg - Timetravel
+
+Create a partitioned table
+The CREATE TABLE ... PARTITIONED BY syntax enables you to create identity-partitioned Iceberg tables. Identity-partitioned Iceberg tables are similar to the regular partitioned tables and are stored in the same directory structure as the regular partitioned tables. The difference is that the data files in the identity-partitioned Iceberg tables continue to store the partitioning columns. 
+
+
+Only identity-partitioned Iceberg tables can be created through Hive. If other systems create Iceberg tables with different partitioning, then they could still be read from Hive.
+
+
+```sql
+set iceberg.mr.catalog = hive;
+set hive.vectorized.execution.enabled = false;
+set hive.tez.mapreduce.output.committer.on.hs2=true; 
+
+CREATE EXTERNAL TABLE ice_t (i int, s string, ts timestamp, d date) 
+PARTITIONED BY (state string)
+STORED BY 'org.apache.iceberg.mr.hive.HiveIcebergStorageHandler';
+```
+
 
 ### Data Sketches
 
