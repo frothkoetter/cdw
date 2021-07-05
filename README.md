@@ -126,6 +126,15 @@ FROM flights_csv
 GROUP BY tailnum
 ORDER BY avg_delay DESC;
 ```
+Note: Runtime approx. 10 minutes for the first run.
+Results
+
+|TAILNUM	| _C1|	AVG_DELAY|	_C3| _C4 |	_C5	| _C6 | _C7 | _C8 | _C9 | _C10	|_C11	| _C12	| _C13	| _C14 | _C15 |	_C16 |
+| :- | :- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |
+|N702AW	|1	|null	|null	|0.0	|1.0	|0.0 |0 | 0.0 |0 |0.0| 0 |0.0 |0 |null |null |843.0 |
+N662??	| 1	|null	|null	|0.0	|1.0	|null |null |null	| null	|null	|null	|null	|null	|null |null	|528.0|
+|N043BR	|1	|null	|null	|0.0	|1.0	|0.0	|0	|0.0 |0	|0.0	|0	|0.0	|0	|null	|null	|224.0|
+
 
 QUERY: Engine Types Causing Most Delays
 DESCRIPTION: Ad Hoc Exploration to Investigate - Exploratory query to determine which engine type contributes to the most delayed flights.
@@ -166,6 +175,12 @@ WHERE planes_csv.tailnum IN
 ```
 NOTE: If this returns no results, then remove the 'WHERE tailnum in …' clause
 
+Results
+
+
+|MODEL	|ENGINE_TYPE|
+| :- | :- |
+|A330-223	|Turbo-Fan| 
 
 -----
 ## Lab 3 - Managed Tables
