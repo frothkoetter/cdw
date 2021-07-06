@@ -320,7 +320,6 @@ Run the explain and query rewrite should show like:
 
 Now you handling new data and refresh the materialized View
 
-*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
 Create a temporary table for incremental data, insert 1000 rows with a new month and insert these into the partitioned by month fact table
 
@@ -387,38 +386,33 @@ No query rewrite: Read flights (86mio rows) and airlines (1.5k rows) with merge 
 ------
 ## Lab 5 - Slowly Changing Dimensions (SCD) - TYPE 2
 
+*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
+
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.005.png)
 
 We create a new SDC table ***airline\_scd*** table and add columns valid\_from and valid\_to. Then loading the initial 1000 rows into this SDC table. 
-
 
 Next step is to mock up new data and change data in the table ***airlines\_stage***. 
 
 Finally merging these two tables with a single MERGE command to maintain the historical data and check the results.
 
-Create the Hive managed table for our contacts. We track a start and end date.
-
-*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
+Create the Hive managed table for our contacts. We track a start and end date. Load initial by copy 1000 rows of current airlines table into the airlimanaged table, We hard code the valid_from dates to the beginning of 2021
 
 ```sql
 drop table if exists airlines_scd;
-create table airlines_scd(code string, description string, valid_from date, valid_to date);
-```
 
-Load initial by copy 1000 rows of current airlines table into the airlimanaged table, We hard code the valid_from dates to the beginning of 2021
-```sql
+create table airlines_scd(code string, description string, valid_from date, valid_to date);
+
 insert into airlines_scd select *, cast('2021-01-01' as date), cast(null as date) from airlines_csv limit 1000;
 ```
-Create an external table pointing to our complete airlines dataset (1491 records)
+
+Create an external staging table pointing to our complete airlines dataset (1491 records) and update a description to mockup a change in the dimension
 
 ```sql
 drop table if exists airlines_stage;
 
 create table airlines_stage as select * from airlines_csv;
-```
 
-Update a description to mockup a change in the dimension
-```sql
 update airlines_stage set description ='SDC Demo Update' where code in ('02Q','04Q')
 ```
 
