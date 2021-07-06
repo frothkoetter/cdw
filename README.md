@@ -126,7 +126,7 @@ FROM flights_csv
 GROUP BY tailnum
 ORDER BY avg_delay DESC;
 ```
-Note: Runtime approx. 10 minutes for the first run.
+Note: Runing the first time may take a clouple minutes.
 
 Results
 
@@ -277,7 +277,7 @@ ALTER TABLE flights_orc ADD CONSTRAINT airlines_fk FOREIGN KEY (uniquecarrier) R
 ```
 Create Materialized View
 ```sql
-DROP MATERIALIZED VIEW IF EXISTS traffic_cancel_airlines
+DROP MATERIALIZED VIEW IF EXISTS traffic_cancel_airlines;
 CREATE MATERIALIZED VIEW traffic_cancel_airlines
 as SELECT airlines.code AS code,  MIN(airlines.description) AS description,
           flights.month AS month,
@@ -290,7 +290,27 @@ group by airlines.code, flights.month;
 Check that the Materialized view is created.
 Replace ** in DB_USER0**
 ```sql
-SHOW MATERIALIZED VIEWS in DB_USER0**;
+SHOW MATERIALIZED VIEWS;
+```
+
+Results
+
+|MV_NAME | REWRITE_ENABLED |  MODE  |
+| :- | :- | :- | 
+|traffic_cancel_airlines|Yes	| Manual refresh |
+
+
+Running a dashoboard query
+
+```sql
+SET hive.query.results.cache.enabled=false;
+
+SELECT airlines.code AS code,  MIN(airlines.description) AS description,
+          flights.month AS month,
+          sum(flights.cancelled) AS cancelled
+FROM flights_orc flights , airlines_orc airlines 
+WHERE flights.uniquecarrier = airlines.code
+group by airlines.code, flights.month;
 ```
 
 
@@ -298,7 +318,10 @@ Incremental refresh the materialized View
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
-First create a table for incremental data 
+First create a table for incremental data, insert 1000 rows with a new month and insert these into the partitioned by month fact table
+
+
+
 
 ```sql
 
@@ -313,19 +336,13 @@ create table flights_orc_incr
  carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, 
  lateaircraftdelay int)
 PARTITIONED BY (month int);
-```
-Now insert 1000 records  
 
-```sql
 
 insert into flights_orc_incr select 15 as month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
 from flights_orc limit 1000;
-```
 
-Insert the new data into fact table
-
-```sql
 INSERT into flights_orc select * from flights_orc_incr;
+
 ```
 
 Update materialized view
@@ -623,9 +640,22 @@ set iceberg.mr.catalog = hive;
 set hive.vectorized.execution.enabled = false;
 set hive.tez.mapreduce.output.committer.on.hs2=true; 
 
-CREATE EXTERNAL TABLE ice_t (i int, s string, ts timestamp, d date) 
-PARTITIONED BY (state string)
+drop table if exists flights_ice;
+
+CREATE EXTERNAL TABLE flights_ice(dayofmonth int, 
+ dayofweek int, deptime int, crsdeptime int, arrtime int, 
+ crsarrtime int, uniquecarrier string, flightnum int, tailnum string, 
+ actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int, 
+ depdelay int, origin string, dest string, distance int, taxiin int, 
+ taxiout int, cancelled int, cancellationcode string, diverted string, 
+ carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, 
+lateaircraftdelay int) 
+partitioned by (month int) 
 STORED BY 'org.apache.iceberg.mr.hive.HiveIcebergStorageHandler';
+
+insert into flights_ice 
+select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
+from flights_csv; 
 ```
 
 
