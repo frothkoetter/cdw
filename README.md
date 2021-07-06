@@ -394,7 +394,7 @@ We create a new SDC table ***airline\_scd*** and add columns ***valid\_from*** a
 
 Finally merging these two tables with a single MERGE command to maintain the historical data and check the results.
 
-Create the Hive managed table for airlines. Load initial by copy 1000 rows of current airlines with hard code the valid_from dates to the beginning of 2021
+Create the Hive managed table for airlines. Load initial by copy 1000 rows of current airlines with hard code the valid_from date
 
 ```sql
 drop table if exists airlines_scd;
