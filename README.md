@@ -305,21 +305,24 @@ Running a dashoboard query
 ```sql
 SET hive.query.results.cache.enabled=false;
 
-SELECT airlines.code AS code,  MIN(airlines.description) AS description,
-          flights.month AS month,
+SELECT airlines.code AS code,  MIN(airlines.description) AS description
           sum(flights.cancelled) AS cancelled
 FROM flights_orc flights , airlines_orc airlines 
 WHERE flights.uniquecarrier = airlines.code
-group by airlines.code, flights.month;
+group by airlines.code;
 ```
 
+Run the explain and query rewrite should show like:
 
-Incremental refresh the materialized View
+![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.003.png)
+
+
+
+Now you handling new data and refresh the materialized View
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
-First create a table for incremental data, insert 1000 rows with a new month and insert these into the partitioned by month fact table
-
+Create a temporary table for incremental data, insert 1000 rows with a new month and insert these into the partitioned by month fact table
 
 
 
