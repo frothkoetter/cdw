@@ -340,7 +340,7 @@ create table flights_orc_incr
 PARTITIONED BY (month int);
 
 
-insert into flights_orc_incr select 15 as month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
+insert into flights_orc_incr select 13 as month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
 from flights_orc limit 1000;
 
 INSERT into flights_orc select * from flights_orc_incr;
@@ -390,20 +390,20 @@ No query rewrite: Read flights (86mio rows) and airlines (1.5k rows) with merge 
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.005.png)
 
-We create a new SDC table ***airline\_scd*** table and add columns valid\_from and valid\_to. Then loading the initial 1000 rows into this SDC table. 
-
-Next step is to mock up new data and change data in the table ***airlines\_stage***. 
+We create a new SDC table ***airline\_scd*** and add columns ***valid\_from*** and ***valid\_to***. Then loading the initial 1000 rows into this SDC table, then mock up new data and change data in the table ***airlines\_stage***. 
 
 Finally merging these two tables with a single MERGE command to maintain the historical data and check the results.
 
-Create the Hive managed table for our contacts. We track a start and end date. Load initial by copy 1000 rows of current airlines table into the airlimanaged table, We hard code the valid_from dates to the beginning of 2021
+Create the Hive managed table for airlines. Load initial by copy 1000 rows of current airlines with hard code the valid_from dates to the beginning of 2021
 
 ```sql
 drop table if exists airlines_scd;
 
 create table airlines_scd(code string, description string, valid_from date, valid_to date);
 
-insert into airlines_scd select *, cast('2021-01-01' as date), cast(null as date) from airlines_csv limit 1000;
+insert into airlines_scd 
+  select *, cast('2021-01-01' as date), cast(null as date) 
+  from airlines_csv limit 1000;
 ```
 
 Create an external staging table pointing to our complete airlines dataset (1491 records) and update a description to mockup a change in the dimension
@@ -413,7 +413,8 @@ drop table if exists airlines_stage;
 
 create table airlines_stage as select * from airlines_csv;
 
-update airlines_stage set description ='SDC Demo Update' where code in ('02Q','04Q')
+update airlines_stage set description =concat('***',description,'***') 
+  where code in ('02Q','04Q');
 ```
 
 Perform the SCD type 2 Merge Command
@@ -444,27 +445,22 @@ when not matched
  then insert values (sub.code, sub.description, current_date(), null);
 ```
 
-Confirm that te new data is updated, table should have 1493 records.
+View the changed records and see that the VALID_FROM and VALID_TO dates are set
 
 ```sql
-select count(*) from airlines_scd;
-```
-
-View the changed records 
-```sql
-select * from airlines_scd where code in ('02Q','04Q')
+select * from airlines_scd where code in ('02Q','04Q') order by code, valid_from;
 ```
 
 
 Results
 
 
-|AIRLINES\_SCD.CODE|AIRLINES\_SCD.DESCRIPTION|AIRLINES\_SCD.VALID\_FROM|AIRLINES\_SCD.VALID\_TO|
+|CODE|DESCRIPTION|VALID\_FROM|VALID\_TO|
 | :- | :- | :- | :- |
 |02Q|Titan Airways|2021-01-01|2021-05-26|
+|02Q|***Titan Airways***|2021-05-26|null|
 |04Q|Tradewind Aviation|2021-01-01|2021-05-26|
-|02Q|SDC Demo Update|2021-05-26|null|
-|04Q|SDC Demo Update|2021-05-26|null|
+|04Q|***Tradewind Aviation***|2021-05-26|null|
 
 
 
