@@ -413,7 +413,7 @@ drop table if exists airlines_stage;
 
 create table airlines_stage as select * from airlines_csv;
 
-update airlines_stage set description =concat('***',description,'***') 
+update airlines_stage set description =concat('Update - ',upper(description)) 
   where code in ('02Q','04Q');
 ```
 
@@ -451,17 +451,15 @@ View the changed records and see that the VALID_FROM and VALID_TO dates are set
 select * from airlines_scd where code in ('02Q','04Q') order by code, valid_from;
 ```
 
-
 Results
 
 
 |CODE|DESCRIPTION|VALID\_FROM|VALID\_TO|
 | :- | :- | :- | :- |
 |02Q|Titan Airways|2021-01-01|2021-05-26|
-|02Q|***Titan Airways***|2021-05-26|null|
+|02Q|Update - TITAN AIRWAYS|2021-05-26|null|
 |04Q|Tradewind Aviation|2021-01-01|2021-05-26|
-|04Q|***Tradewind Aviation***|2021-05-26|null|
-
+|04Q|Update - TRADEWIND AVIATION|2021-05-26|null|
 
 
 
