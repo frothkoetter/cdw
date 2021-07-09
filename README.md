@@ -790,6 +790,19 @@ Results
 | JFK                  | AA647:91067.0;AA177:87305.0;AA1639:82770.0;    | 1.0155716E7                 |
 | LAX                  | DL1579:68519.0;DL1565:49367.0;WN1517:48037.0;  | 1.795024E7                  |
 
+SQL to break the field into multi rows
+
+```sql
+select iata, cast(delay_total as bigint) 
+, split(flights,"\\:")[0] as flug
+, split(flights,"\\:")[1] as delay
+, (100 / delay_total * cast (split(flights,"\\:")[1] as integer)) as pct
+   from ( select iata,
+	          delay_total,
+	          split(delay_top_flights,"\\|")  top_flights
+	    from airports_stats ) f
+		lateral VIEW explode(f.top_flights) bar AS flights
+```
 
 ### Iceberg - Timetravel
 
