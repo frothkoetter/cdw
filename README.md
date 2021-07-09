@@ -620,21 +620,36 @@ DROP DATABASE DBB_USER0** CASCADE;
 
 ### HPLSQL 
 
-Login into a K8s pod with hiveserver2 CDW 
 
-```sql
+Login into a K8s pod with hiveserver2 CDW and create the procedures
+
+This HPLSQL Package run a analyse by airport and list the top delayed flights inone single field (denormalized).
 
 SQL Procedures Script - copy and save in aa file: vhol.hql 
 
 ```sql
 use airlinedata;
 
-drop table if exists airports_stats;
-create table airports_stats(iata string, airport string, city string, 
-         arrival_delay_total double, arrival_delay_top_flights string) ;
+create or replace package airport_experience AS
+ MAX_FLIGHTS int := 3;
+ procedure describe(i int);
+ procedure dbg (debug_level integer, msg string);
+ procedure total_arrival_delay ( IN v_iata string, OUT v_top_flights string, OUT v_totaldelay double);
+ procedure generate(i int);
+END;
 
-create or replace procedure dbg 
-   (debug_level integer, msg string)
+create or replace package body airport_experience AS
+
+procedure describe (i int) is
+begin
+ dbms_output.put_line('Package airport_experiences');
+ dbms_output.put_line('Version: 0.0.1');
+ dbms_output.put_line('Collection of prodecures to calcluate airpoort experience')
+ dbms_output.put_line('prodecures : generate () no parameter')
+ dbms_output.put_line('result set : table : airport_experiences')
+end;
+
+procedure dbg (debug_level integer, msg string)
 is
 BEGIN
 declare ts string default SYSDATE;
@@ -650,14 +665,12 @@ EXCEPTION WHEN OTHERS THEN
   dbg(99,'Error: procedure dbg');
 end;
 
-create or replace procedure total_arrival_delay
-  ( IN v_iata string, OUT v_top_flights string, OUT v_totaldelay double)
+procedure total_arrival_delay ( IN v_iata string, OUT v_top_flights string, OUT v_totaldelay double)
 is
 BEGIN
   declare debug_level integer default 1;
   declare v_flight string default  '';
   declare v_sum_delay double;
-  declare MAX_FLIGHTS int default 10;
   declare i int default  0; 
   declare v_d double;
 
@@ -711,7 +724,8 @@ EXCEPTION WHEN OTHERS THEN
   dbg(99,'OTHERS: total_arrival_delay()');
 END;
 
-
+procedure generate(i int)
+IS
 BEGIN
 DECLARE debug_level integer default 1;
 DECLARE v_iata string default 'JFK';
@@ -739,22 +753,42 @@ WHILE SQLCODE=0 THEN
 
   v_msg = 'airport:'||v_iata|| ' top flights: '|| v_top ||' total delay:'||v_total;
   dbg(debug_level,  'main: 4 IN_OUT '||v_msg);
-  insert into temp1 values( v_msg);
+
+  insert into  airports_stats values( v_iata, v_top, v_total);
 
   FETCH cur INTO v_iata; 
 END WHILE;
 CLOSE cur;
-
-select msg from temp1 ;
 
   dbg(debug_level ,'main: 5 - finished');
 
 EXCEPTION WHEN OTHERS THEN
   dbg(99,'Error: main');
 END;
+
+end;
+
+drop table if exists airports_stats;
+create table airports_stats(iata string, delay_top_flights string, delay_total double  ) ;
+begin
+ CALL airport_experience.describe(1);
+ CALL airport_experience.generate(1);
+end;
+select * from airports_stats;
 ```
 
 Run beeline
+
+```sql
+$ beeline -u "jdbc:hive2://hs2-vhol-cdw2-nosso.env-hvmrdx.dw.a465-9q4k.cloudera.site/default;transportMode=http;httpPath=cliservice;ssl=true;retries=3;mode=hplsql;" -n frothkoetter -p $PW -f /tmp/vhol.hql
+```
+
+Results
+
+| airports_stats.iata  |        airports_stats.delay_top_flights        | airports_stats.delay_total  |
+| :- | :- | :- |
+| JFK                  | AA647:91067.0;AA177:87305.0;AA1639:82770.0;    | 1.0155716E7                 |
+| LAX                  | DL1579:68519.0;DL1565:49367.0;WN1517:48037.0;  | 1.795024E7                  |
 
 
 ### Iceberg - Timetravel
