@@ -617,6 +617,146 @@ Clean Up
 ```sql
 DROP DATABASE DBB_USER0** CASCADE;
 ```
+
+### HPLSQL 
+
+Login into a K8s pod with hiveserver2 CDW 
+
+```sql
+
+SQL Procedures Script - copy and save in aa file: vhol.hql 
+
+```sql
+use airlinedata;
+
+drop table if exists airports_stats;
+create table airports_stats(iata string, airport string, city string, 
+         arrival_delay_total double, arrival_delay_top_flights string) ;
+
+create or replace procedure dbg 
+   (debug_level integer, msg string)
+is
+BEGIN
+declare ts string default SYSDATE;
+declare lvl string default 'INFO';
+if debug_level > 0 
+ Begin
+
+ if debug_level > 10 SET lvl := 'ERROR';
+
+  DBMS_OUTPUT.PUT_LINE( ts || ':' ||lvl|| ': ' || msg); 
+ end;
+EXCEPTION WHEN OTHERS THEN
+  dbg(99,'Error: procedure dbg');
+end;
+
+create or replace procedure total_arrival_delay
+  ( IN v_iata string, OUT v_top_flights string, OUT v_totaldelay double)
+is
+BEGIN
+  declare debug_level integer default 1;
+  declare v_flight string default  '';
+  declare v_sum_delay double;
+  declare MAX_FLIGHTS int default 10;
+  declare i int default  0; 
+  declare v_d double;
+
+  DECLARE cur CURSOR FOR SELECT concat(uniquecarrier, flightnum) as flight_num, sum(arrdelay) as sum_delay
+        from flights_orc
+        where origin = v_iata 
+        group by concat(uniquecarrier,flightnum)
+	having sum(arrdelay) is not null
+        order by sum_delay DESC;
+
+  dbg(debug_level, 'pro: total_arriaval_delay v_iata value: ' || v_iata || ' v_arrdelay: '||v_arr_delay );
+  v_top_flights = '';
+
+  select sum(arrdelay) into v_totaldelay
+    from flights_orc 
+    where origin = v_iata; 
+
+  dbg(debug_level, 'pro: fetch total delay value: ' || v_totaldelay );
+ 
+
+  if v_totaldelay <> 0  then
+    begin
+    dbg(debug_level, 'pro: delays found');
+
+    OPEN cur;
+
+    dbg(debug_level,'pro: cursor open');
+
+    FETCH cur INTO  v_flight, v_sum_delay;
+     WHILE SQLCODE=0 and i < MAX_FLIGHTS THEN
+      set i := i + 1;
+
+      dbg(debug_level,'pro: fetched to ' || i || ' flight : ' || v_flight );
+ 
+      SET v_top_flights = v_top_flights || v_flight ||':'||v_sum_delay||';'
+    FETCH cur INTO  v_flight, v_sum_delay;
+   END WHILE;
+   CLOSE cur;
+
+   end;
+   else
+    begin
+    dbg(debug_level,'pro: no delays found ');
+     v_totaldelay = 0;
+    end;
+ end if;
+
+dbg( debug_level,'end: top_flights: '||v_top_flights);
+
+EXCEPTION WHEN OTHERS THEN
+  dbg(99,'OTHERS: total_arrival_delay()');
+END;
+
+
+BEGIN
+DECLARE debug_level integer default 1;
+DECLARE v_iata string default 'JFK';
+DECLARE v_top string default '#';
+DECLARE v_total double default 0;
+DECLARE ts timestamp;
+DECLARE v_msg string default '';
+DECLARE TEMPORARY TABLE temp1 ( msg STRING);
+DECLARE cur CURSOR FOR SELECT iata from airports_orc where iata in( 'JFK','LAX');
+
+dbg(debug_level, 'main: 1');
+
+OPEN cur;
+
+  dbg(debug_level,'main: 2 - cursor open');
+
+FETCH cur INTO v_iata; 
+WHILE SQLCODE=0 THEN
+  v_top = '#';
+  v_total = 0; 
+
+  dbg(debug_level,'main: 3 fetch - iata: ' || v_iata) ;
+  call total_arrival_delay(v_iata,v_top,v_total );
+  dbg(debug_level,  'main: 4 called proc total_arrival_delay ');
+
+  v_msg = 'airport:'||v_iata|| ' top flights: '|| v_top ||' total delay:'||v_total;
+  dbg(debug_level,  'main: 4 IN_OUT '||v_msg);
+  insert into temp1 values( v_msg);
+
+  FETCH cur INTO v_iata; 
+END WHILE;
+CLOSE cur;
+
+select msg from temp1 ;
+
+  dbg(debug_level ,'main: 5 - finished');
+
+EXCEPTION WHEN OTHERS THEN
+  dbg(99,'Error: main');
+END;
+```
+
+Run beeline
+
+
 ### Iceberg - Timetravel
 
 Create a partitioned table
@@ -718,13 +858,12 @@ from airlinedata.flights_sketch;
 ```
 
 <p>Results</p><p>     </p>|
-| :- |
+
 
 |44834.13712876354|
 | :- |
 
-||
-| :- |
+
 
 Explain - extreme fast query a table 
 
@@ -736,13 +875,12 @@ alternative classic query would be
 select count(distinct(cast(concat(flights\_orc.uniquecarrier,flights\_orc.flightnum) as string))) from airlinedata.flights_orc;
 ```
 </p><p>Results</p><p>     </p>|
-| :- |
+
 
 |44684|
 | :- |
 
-||
-| :- |
+
 
 Explain - query full fact table with going over 86mio of the fact table
 
@@ -769,7 +907,7 @@ from airlinedata.flights_frq_sketch;
 ```
 
 <p>Results</p><p>     </p>|
-| :- |
+
 
 |ITEM|ESTIMATE|LOWER\_BOUND|UPPER\_BOUND|
 | :- | :- | :- | :- |
@@ -777,8 +915,7 @@ from airlinedata.flights_frq_sketch;
 |WN25|929|558|929|
 |AS64|884|513|884|
 
-||
-| :- |
+
 
 
 validate the results
@@ -792,13 +929,14 @@ group by concat(flights_orc.uniquecarrier,flights_orc.flightnum)
 order by num_cancelled desc;
 ```
 
+Results
+
 |FLIGHT|NUM\_CANCELLED|
 | :- | :- |
 |AS65|940|
 |TW65|111|
 |US65|74|
 
-||
-| :- |
+
 
 
