@@ -305,7 +305,7 @@ Running a dashoboard query
 ```sql
 SET hive.query.results.cache.enabled=false;
 
-SELECT airlines.code AS code,  MIN(airlines.description) AS description
+SELECT airlines.code AS code,  MIN(airlines.description) AS description, 
           sum(flights.cancelled) AS cancelled
 FROM flights_orc flights , airlines_orc airlines 
 WHERE flights.uniquecarrier = airlines.code
