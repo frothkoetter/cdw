@@ -602,7 +602,7 @@ In the Ranger UI, select the “Audit” menu and limit the amount of data displ
 
 
 -----
-## (Optional Bonus Material)
+## Bonus Material (optional)
 Run load test to simulate adding many more end users. Then view results of autoscaling. Discuss how autoscaling works, and how it allows for easy, cost-effective scaling. 
 
 |-- Optional step. Can be just a discussion if no load test is actually done.|
@@ -623,24 +623,26 @@ DROP DATABASE DBB_USER0** CASCADE;
 
 Login into a K8s pod with hiveserver2 CDW and create the procedures
 
+
 This HPLSQL Package run a analyse by airport and list the top delayed flights inone single field (denormalized).
 
 SQL Procedures Script - copy and save in aa file: vhol.hql 
 
 ```sql
+
 use airlinedata;
 
 create or replace package airport_experience AS
  MAX_FLIGHTS int := 3;
- procedure describe(i int);
+ procedure describe();
  procedure dbg (debug_level integer, msg string);
  procedure total_arrival_delay ( IN v_iata string, OUT v_top_flights string, OUT v_totaldelay double);
- procedure generate(i int);
+ procedure generate( v_airports varchar default 'JFK');
 END;
 
 create or replace package body airport_experience AS
 
-procedure describe (i int) is
+procedure describe () is
 begin
  dbms_output.put_line('Package airport_experiences');
  dbms_output.put_line('Version: 0.0.1');
@@ -724,17 +726,21 @@ EXCEPTION WHEN OTHERS THEN
   dbg(99,'OTHERS: total_arrival_delay()');
 END;
 
-procedure generate(i int)
+procedure generate( v_airports varchar default 'JFK')
 IS
 BEGIN
 DECLARE debug_level integer default 1;
 DECLARE v_iata string default 'JFK';
 DECLARE v_top string default '#';
 DECLARE v_total double default 0;
+DECLARE v_c char;
 DECLARE ts timestamp;
 DECLARE v_msg string default '';
-DECLARE TEMPORARY TABLE temp1 ( msg STRING);
-DECLARE cur CURSOR FOR SELECT iata from airports_orc where iata in( 'JFK','LAX');
+
+dbg(debug_level, 'main: 1 airports ' || v_airports);
+select "'" into v_c;
+
+DECLARE cur CURSOR FOR 'SELECT iata from airports_orc where iata in ( ' || v_c || v_airports || v_c || ')';
 
 dbg(debug_level, 'main: 1');
 
@@ -754,7 +760,7 @@ WHILE SQLCODE=0 THEN
   v_msg = 'airport:'||v_iata|| ' top flights: '|| v_top ||' total delay:'||v_total;
   dbg(debug_level,  'main: 4 IN_OUT '||v_msg);
 
-  insert into  airports_stats values( v_iata, v_top, v_total);
+  insert into  airports_experiences values( v_iata, v_top, v_total);
 
   FETCH cur INTO v_iata; 
 END WHILE;
@@ -768,13 +774,18 @@ END;
 
 end;
 
-drop table if exists airports_stats;
-create table airports_stats(iata string, delay_top_flights string, delay_total double  ) ;
+
+drop table if exists airports_experiences;
+create table airports_experiences(iata string, delay_top_flights string, delay_total double  ) ;
 begin
- CALL airport_experience.describe(1);
- CALL airport_experience.generate(1);
+ CALL airport_experience.describe();
+ CALL airport_experience.generate( 'SFO');
+ CALL airport_experience.generate( 'JFK');
+ CALL airport_experience.generate( 'BOS');
+ CALL airport_experience.generate( '*');
 end;
-select * from airports_stats;
+select * from airports_experiences;
+
 ```
 
 Run beeline
