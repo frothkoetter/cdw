@@ -281,8 +281,7 @@ DROP MATERIALIZED VIEW IF EXISTS traffic_cancel_airlines;
 CREATE MATERIALIZED VIEW traffic_cancel_airlines
 as SELECT airlines.code AS code,  MIN(airlines.description) AS description,
           flights.month AS month,
-          sum(flights.cancelled) AS cancelled,
-          count(flights.diverted) AS diverted
+          sum(flights.cancelled) AS cancelled
 FROM flights_orc flights JOIN airlines_orc airlines ON (flights.uniquecarrier = airlines.code)
 group by airlines.code, flights.month;
 ```
