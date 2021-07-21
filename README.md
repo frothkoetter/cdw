@@ -75,6 +75,16 @@ drop table if exists airports_csv;
 CREATE EXTERNAL TABLE airports_csv(iata string, airport string, city string, state DOUBLE, country string, lat DOUBLE, lon DOUBLE) 
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
 STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.header.line.count"="1");
+
+drop table if exists unique_tickets;
+CREATE external TABLE unique_tickets_csv (ticketnumber BIGINT, leg1flightnum BIGINT, leg1uniquecarrier STRING, leg1origin STRING,   leg1dest STRING, leg1month BIGINT, leg1dayofmonth BIGINT,   
+ leg1dayofweek BIGINT, leg1deptime BIGINT, leg1arrtime BIGINT,   
+ leg2flightnum BIGINT, leg2uniquecarrier STRING, leg2origin STRING,   
+ leg2dest STRING, leg2month BIGINT, leg2dayofmonth BIGINT,   leg2dayofweek BIGINT, leg2deptime BIGINT, leg2arrtime BIGINT ) 
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
+STORED AS TEXTFILE LOCATION '/airlinedata-csv/unique_tickets' 
+tblproperties("skip.header.line.count"="1");
+
 ```
 
 
@@ -94,6 +104,7 @@ Results
 |airports_csv|
 |flights_csv|
 |planes_csv|
+|unique_tickets_csv|
 
 
 Run exploratory queries to understand the data. This reads the CSV data, converts it into a columnar in-memory format, and executes the query.
@@ -200,6 +211,9 @@ create table airports_orc as select * from airports_csv;
 drop table if exists planes_orc;
 create table planes_orc as select * from planes_csv;
 
+drop table if exists unique_tickets_orc;
+create table unique_tickets_orc as select * from unique_tickets_csv;
+
 drop table if exists flights_orc;
 create table flights_orc partitioned by (month) as 
 select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
@@ -229,6 +243,8 @@ Results
 |flights_orc|
 |planes_csv|
 |planes_orc|
+|unique_tickets_csv|
+|unique_tickets_orc|
 
 
 
@@ -263,6 +279,130 @@ Run query again.
 Check the cache metrics again to see the improved hit rate.
 
 
+Query to find all international flights: flights where destination airport country is not the same as origin airport country
+
+```sql
+SELECT DISTINCT 
+   flightnum, 
+   uniquecarrier, 
+   origin, 
+   dest, 
+   month, 
+   dayofmonth, 
+   `dayofweek`
+FROM 
+  flights_orc f, 
+   airports_orc oa, 
+   airports_orc da  
+WHERE 
+   f.origin = oa.iata 
+   and f.dest = da.iata 
+   And oa.country <> da.country 
+ORDER BY
+   month ASC, 
+   dayofmonth ASC;
+```
+
+Query to explore passenger manifest data:  do we have international connecting flights?
+
+```sql
+SELECT * FROM 
+  unique_tickets_orc a, 
+  flights_orc o, 
+  flights_orc d,
+  airports_orc oa, 
+  airports_orc da  
+WHERE
+   a.leg1flightnum = o.flightnum
+   AND a.leg1uniquecarrier = o.uniquecarrier 
+   AND a.leg1origin = o.origin 
+   AND a.leg1dest = o.dest 
+   AND a.leg1month = o.month 
+   AND a.leg1dayofmonth = o.dayofmonth
+   AND a.leg1dayofweek = o.`dayofweek` 
+   AND a.leg2flightnum = d.flightnum
+   AND a.leg2uniquecarrier = d.uniquecarrier 
+   AND a.leg2origin = d.origin 
+   AND a.leg2dest = d.dest 
+   AND a.leg2month = d.month 
+   AND a.leg2dayofmonth = d.dayofmonth
+   AND a.leg2dayofweek = d.`dayofweek` 
+   AND d.origin = oa.iata 
+   AND d.dest = da.iata 
+   AND oa.country <> da.country ; 
+```
+
+Number of passengers on the airline that has long, planned layovers for an international
+flight
+```sql SELECT 
+   a.leg1uniquecarrier as carrier, 
+   count(a.leg1uniquecarrier) as passengers
+FROM 
+   unique_tickets a
+where 
+   a.leg2deptime - a.leg1arrtime>90
+group by 
+   a.leg1uniquecarrier;
+```
+
+
+Number of passengers on airlines that have elongated layovers for an international flight caused by delayed connection
+```sql SELECT 
+   a.leg1uniquecarrier as carrier, 
+   count(a.leg1uniquecarrier) as passengers 
+FROM 
+   unique_tickets_orc a, 
+   flights_orc o, 
+   flights_orc d
+where 
+       a.leg1flightnum = o.flightnum
+   AND a.leg1uniquecarrier = o.uniquecarrier 
+   AND a.leg1origin = o.origin 
+   AND a.leg1dest = o.dest 
+   AND a.leg1month = o.month 
+   AND a.leg1dayofmonth = o.dayofmonth
+   AND a.leg1dayofweek = o.`dayofweek` 
+   AND a.leg2flightnum = d.flightnum
+   AND a.leg2uniquecarrier = d.uniquecarrier 
+   AND a.leg2origin = d.origin 
+   AND a.leg2dest = d.dest 
+   AND a.leg2month = d.month 
+   AND a.leg2dayofmonth = d.dayofmonth
+   AND a.leg2dayofweek = d.`dayofweek` 
+   AND o.depdelay > 60
+group by 
+   a.leg1uniquecarrier;
+```
+
+Number of passengers on airlines that have elongated layovers for an international flight caused by missed connection
+```sql
+SELECT 
+   a.leg1uniquecarrier as carrier, 
+   count(a.leg1uniquecarrier) as passengers
+--   o.arrdelay as delay
+FROM 
+   unique_tickets_orc a, 
+   flights_orc o, 
+   flights_orc d
+where 
+       a.leg1flightnum = o.flightnum
+   AND a.leg1uniquecarrier = o.uniquecarrier 
+   AND a.leg1origin = o.origin 
+   AND a.leg1dest = o.dest 
+   AND a.leg1month = o.month 
+   AND a.leg1dayofmonth = o.dayofmonth
+   AND a.leg1dayofweek = o.`dayofweek` 
+   AND a.leg2flightnum = d.flightnum
+   AND a.leg2uniquecarrier = d.uniquecarrier 
+   AND a.leg2origin = d.origin 
+   AND a.leg2dest = d.dest 
+   AND a.leg2month = d.month 
+   AND a.leg2dayofmonth = d.dayofmonth
+   AND a.leg2dayofweek = d.`dayofweek` 
+   AND d.deptime-o.arrtime < o.arrdelay-45
+group by 
+   a.leg1uniquecarrier;
+```
 -----
 ## Lab 4 - Materialized View
 
