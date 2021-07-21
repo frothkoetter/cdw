@@ -334,7 +334,8 @@ WHERE
 
 Number of passengers on the airline that has long, planned layovers for an international
 flight
-```sql SELECT 
+```sql 
+SELECT 
    a.leg1uniquecarrier as carrier, 
    count(a.leg1uniquecarrier) as passengers
 FROM 
@@ -347,7 +348,8 @@ group by
 
 
 Number of passengers on airlines that have elongated layovers for an international flight caused by delayed connection
-```sql SELECT 
+```sql 
+SELECT 
    a.leg1uniquecarrier as carrier, 
    count(a.leg1uniquecarrier) as passengers 
 FROM 
