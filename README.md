@@ -458,8 +458,7 @@ Run the explain and query rewrite should show like:
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.003.png)
 
 
-
-Now you handling new data and refresh the materialized View
+(OPTIONAL) Handling new data and refresh the materialized View.
 
 
 Create a temporary table for incremental data, insert 1000 rows with a new month and insert these into the partitioned by month fact table
