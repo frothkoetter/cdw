@@ -339,7 +339,7 @@ SELECT
    a.leg1uniquecarrier as carrier, 
    count(a.leg1uniquecarrier) as passengers
 FROM 
-   unique_tickets a
+   unique_tickets_orc a
 where 
    a.leg2deptime - a.leg1arrtime>90
 group by 
