@@ -1023,10 +1023,9 @@ from airlinedata.flights_frq_sketch;
 validate the results
 
 ```sql
-select concat(flights_orc.uniquecarrier,flights_orc.flightnum) as flight, 
-       count(1) as num_cancelled
+select concat(flights_orc.uniquecarrier,flights_orc.flightnum) as flight, count(1) as num_cancelled
 from airlinedata.flights_orc 
-where flightnum = 65 and cancelled = 1
+where uniquecarrier = 'AS' and flightnum = 65 and cancelled = 1
 group by concat(flights_orc.uniquecarrier,flights_orc.flightnum)
 order by num_cancelled desc;
 ```
@@ -1036,8 +1035,7 @@ Results
 |FLIGHT|NUM\_CANCELLED|
 | :- | :- |
 |AS65|940|
-|TW65|111|
-|US65|74|
+
 
 
 
