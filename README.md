@@ -897,6 +897,7 @@ create table  dept(
   loc    varchar2(13),
   constraint pk_dept primary key (deptno)
 );
+
 drop table emp; 
 create table emp(
   empno    number(4,0),
@@ -915,20 +916,20 @@ insert into dept values(20, 'RESEARCH', 'DALLAS');
 insert into dept values(30, 'SALES', 'CHICAGO');
 insert into dept values(40, 'OPERATIONS', 'BOSTON');
  
-insert into emp values (7369,'SMITH','CLERK',7902,'93/6/13',800,0.00,20);
-insert into emp values (7499,'ALLEN','SALESMAN',7698,'98/8/15',1600,300,30);
-insert into emp values (7521,'WARD','SALESMAN',7698,'96/3/26',1250,500,30);
-insert into emp values (7566,'JONES','MANAGER',7839,'95/10/31',2975,null,20);
-insert into emp values (7698,'BLAKE','MANAGER',7839,'92/6/11',2850,null,30);
-insert into emp values (7782,'CLARK','MANAGER',7839,'93/5/14',2450,null,10);
-insert into emp values (7788,'SCOTT','ANALYST',7566,'96/3/5',3000,null,20);
-insert into emp values (7839,'KING','PRESIDENT',null,'90/6/9',5000,0,10);
-insert into emp values (7844,'TURNER','SALESMAN',7698,'95/6/4',1500,0,30);
-insert into emp values (7876,'ADAMS','CLERK',7788,'99/6/4',1100,null,20);
-insert into emp values (7900,'JAMES','CLERK',7698,'00/6/23',950,null,30);
-insert into emp values (7934,'MILLER','CLERK',7782,'00/1/21',1300,null,10);
-insert into emp values (7902,'FORD','ANALYST',7566,'97/12/5',3000,null,20);
-insert into emp values (7654,'MARTIN','SALESMAN',7698,'98/12/5',1250,1400,30);
+insert into emp values (7369,'SMITH','CLERK',7902,'1993-6-13',800,0.00,20);
+insert into emp values (7499,'ALLEN','SALESMAN',7698,'1998-8-15',1600,300,30);
+insert into emp values (7521,'WARD','SALESMAN',7698,'1996-3-26',1250,500,30);
+insert into emp values (7566,'JONES','MANAGER',7839,'1995-10-31',2975,null,20);
+insert into emp values (7698,'BLAKE','MANAGER',7839,'1992-6-11',2850,null,30);
+insert into emp values (7782,'CLARK','MANAGER',7839,'1993-5-14',2450,null,10);
+insert into emp values (7788,'SCOTT','ANALYST',7566,'1996-3-5',3000,null,20);
+insert into emp values (7839,'KING','PRESIDENT',null,'1990-6-9',5000,0,10);
+insert into emp values (7844,'TURNER','SALESMAN',7698,'1995-6-4',1500,0,30);
+insert into emp values (7876,'ADAMS','CLERK',7788,'1999-6-4',1100,null,20);
+insert into emp values (7900,'JAMES','CLERK',7698,'2000-6-23',950,null,30);
+insert into emp values (7934,'MILLER','CLERK',7782,'2000-1-21',1300,null,10);
+insert into emp values (7902,'FORD','ANALYST',7566,'1997-12-5',3000,null,20);
+insert into emp values (7654,'MARTIN','SALESMAN',7698,'1998-12-5',1250,1400,30);
 ```
 Switch to HUE or DAS and query the data.
 ```sql
@@ -940,25 +941,22 @@ order by ename;
 ```
 Result
 
-|---------+-------------+------------+--------+-----------+-----------|
-|  ename  |    dname    |    job     | empno  | hiredate  |    loc    |
-|---------+-------------+------------+--------+-----------+-----------|
-| ADAMS   | RESEARCH    | CLERK      | 7876   | NULL      | DALLAS    |
-| ALLEN   | SALES       | SALESMAN   | 7499   | NULL      | CHICAGO   |
-| BLAKE   | SALES       | MANAGER    | 7698   | NULL      | CHICAGO   |
-| CLARK   | ACCOUNTING  | MANAGER    | 7782   | NULL      | NEW YORK  |
-| FORD    | RESEARCH    | ANALYST    | 7902   | NULL      | DALLAS    |
-| JAMES   | SALES       | CLERK      | 7900   | NULL      | CHICAGO   |
-| JONES   | RESEARCH    | MANAGER    | 7566   | NULL      | DALLAS    |
-| KING    | ACCOUNTING  | PRESIDENT  | 7839   | NULL      | NEW YORK  |
-| MARTIN  | SALES       | SALESMAN   | 7654   | NULL      | CHICAGO   |
-| MILLER  | ACCOUNTING  | CLERK      | 7934   | NULL      | NEW YORK  |
-| SCOTT   | RESEARCH    | ANALYST    | 7788   | NULL      | DALLAS    |
-| SMITH   | RESEARCH    | CLERK      | 7369   | NULL      | DALLAS    |
-| TURNER  | SALES       | SALESMAN   | 7844   | NULL      | CHICAGO   |
-| WARD    | SALES       | SALESMAN   | 7521   | NULL      | CHICAGO   |
-+---------+-------------+------------+--------+-----------+-----------+
-
+|  ename  |    dname    |    job     | empno  | hiredate    |    loc    |
+|:--------|:------------|:-----------|:-------|:------------|:----------|
+| ADAMS   | RESEARCH    | CLERK      | 7876   | 1999-06-04  | DALLAS    |
+| ALLEN   | SALES       | SALESMAN   | 7499   | 1998-08-15  | CHICAGO   |
+| BLAKE   | SALES       | MANAGER    | 7698   | 1992-06-11  | CHICAGO   |
+| CLARK   | ACCOUNTING  | MANAGER    | 7782   | 1993-05-14  | NEW YORK  |
+| FORD    | RESEARCH    | ANALYST    | 7902   | 1997-12-05  | DALLAS    |
+| JAMES   | SALES       | CLERK      | 7900   | 2000-06-23  | CHICAGO   |
+| JONES   | RESEARCH    | MANAGER    | 7566   | 1995-10-31  | DALLAS    |
+| KING    | ACCOUNTING  | PRESIDENT  | 7839   | 1990-06-09  | NEW YORK  |
+| MARTIN  | SALES       | SALESMAN   | 7654   | 1998-12-05  | CHICAGO   |
+| MILLER  | ACCOUNTING  | CLERK      | 7934   | 2000-01-21  | NEW YORK  |
+| SCOTT   | RESEARCH    | ANALYST    | 7788   | 1996-03-05  | DALLAS    |
+| SMITH   | RESEARCH    | CLERK      | 7369   | 1993-06-13  | DALLAS    |
+| TURNER  | SALES       | SALESMAN   | 7844   | 1995-06-04  | CHICAGO   |
+| WARD    | SALES       | SALESMAN   | 7521   | 1996-03-26  | CHICAGO   |
 
 ### Iceberg - Timetravel
 
