@@ -694,7 +694,7 @@ Clean Up
 DROP DATABASE DBB_USER0** CASCADE;
 ```
 
-### HPLSQL 
+### HPLSQL - Database Applications
 
 
 Login into a K8s pod with hiveserver2 CDW and create the procedures
@@ -877,6 +877,88 @@ Results
 | JFK                  | AA647:91067.0;AA177:87305.0;AA1639:82770.0;    | 1.0155716E7                 |
 | LAX                  | DL1579:68519.0;DL1565:49367.0;WN1517:48037.0;  | 1.795024E7                  |
 
+### HPLSQL - Oracle Migration
+
+
+Login into a K8s pod with hiveserver2 CDW and create emp & dept tables (DDL with Oracle data typpe and constraints) and insert data.
+
+
+SQL Procedures Script - copy and save in aa file: vhol.hql 
+
+```sql
+
+create database if not exists hplsql;
+use hplsql;
+
+drop table dept;
+create table  dept(
+  deptno number(2,0),
+  dname  varchar2(14),
+  loc    varchar2(13),
+  constraint pk_dept primary key (deptno)
+);
+drop table emp; 
+create table emp(
+  empno    number(4,0),
+  ename    varchar2(10),
+  job      varchar2(9),
+  mgr      number(4,0),
+  hiredate date,
+  sal      number(7,2),
+  comm     number(7,2),
+  deptno   number(2,0),
+  constraint pk_emp primary key (empno),
+  constraint fk_deptno foreign key (deptno) references dept (deptno)
+);
+insert into dept values(10, 'ACCOUNTING', 'NEW YORK');
+insert into dept values(20, 'RESEARCH', 'DALLAS');
+insert into dept values(30, 'SALES', 'CHICAGO');
+insert into dept values(40, 'OPERATIONS', 'BOSTON');
+ 
+insert into emp values (7369,'SMITH','CLERK',7902,'93/6/13',800,0.00,20);
+insert into emp values (7499,'ALLEN','SALESMAN',7698,'98/8/15',1600,300,30);
+insert into emp values (7521,'WARD','SALESMAN',7698,'96/3/26',1250,500,30);
+insert into emp values (7566,'JONES','MANAGER',7839,'95/10/31',2975,null,20);
+insert into emp values (7698,'BLAKE','MANAGER',7839,'92/6/11',2850,null,30);
+insert into emp values (7782,'CLARK','MANAGER',7839,'93/5/14',2450,null,10);
+insert into emp values (7788,'SCOTT','ANALYST',7566,'96/3/5',3000,null,20);
+insert into emp values (7839,'KING','PRESIDENT',null,'90/6/9',5000,0,10);
+insert into emp values (7844,'TURNER','SALESMAN',7698,'95/6/4',1500,0,30);
+insert into emp values (7876,'ADAMS','CLERK',7788,'99/6/4',1100,null,20);
+insert into emp values (7900,'JAMES','CLERK',7698,'00/6/23',950,null,30);
+insert into emp values (7934,'MILLER','CLERK',7782,'00/1/21',1300,null,10);
+insert into emp values (7902,'FORD','ANALYST',7566,'97/12/5',3000,null,20);
+insert into emp values (7654,'MARTIN','SALESMAN',7698,'98/12/5',1250,1400,30);
+```
+Switch to HUE or DAS and query the data.
+```sql
+use hplsql;
+select ename, dname, job, empno, hiredate, loc  
+from emp, dept  
+where emp.deptno = dept.deptno  
+order by ename;
+```
+Result
+
+|---------+-------------+------------+--------+-----------+-----------|
+|  ename  |    dname    |    job     | empno  | hiredate  |    loc    |
+|---------+-------------+------------+--------+-----------+-----------|
+| ADAMS   | RESEARCH    | CLERK      | 7876   | NULL      | DALLAS    |
+| ALLEN   | SALES       | SALESMAN   | 7499   | NULL      | CHICAGO   |
+| BLAKE   | SALES       | MANAGER    | 7698   | NULL      | CHICAGO   |
+| CLARK   | ACCOUNTING  | MANAGER    | 7782   | NULL      | NEW YORK  |
+| FORD    | RESEARCH    | ANALYST    | 7902   | NULL      | DALLAS    |
+| JAMES   | SALES       | CLERK      | 7900   | NULL      | CHICAGO   |
+| JONES   | RESEARCH    | MANAGER    | 7566   | NULL      | DALLAS    |
+| KING    | ACCOUNTING  | PRESIDENT  | 7839   | NULL      | NEW YORK  |
+| MARTIN  | SALES       | SALESMAN   | 7654   | NULL      | CHICAGO   |
+| MILLER  | ACCOUNTING  | CLERK      | 7934   | NULL      | NEW YORK  |
+| SCOTT   | RESEARCH    | ANALYST    | 7788   | NULL      | DALLAS    |
+| SMITH   | RESEARCH    | CLERK      | 7369   | NULL      | DALLAS    |
+| TURNER  | SALES       | SALESMAN   | 7844   | NULL      | CHICAGO   |
+| WARD    | SALES       | SALESMAN   | 7521   | NULL      | CHICAGO   |
++---------+-------------+------------+--------+-----------+-----------+
+
 
 ### Iceberg - Timetravel
 
@@ -909,7 +991,7 @@ insert into flights_ice
 select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
 from flights_csv; 
 ```
-
+... more to come .
 
 ### Data Sketches
 
