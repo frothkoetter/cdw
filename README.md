@@ -880,10 +880,10 @@ Results
 ### HPLSQL - Oracle Migration
 
 
-Login into a K8s pod with hiveserver2 CDW and create emp & dept tables (DDL with Oracle data typpe and constraints) and insert data.
+Login into a K8s pod with hiveserver2 CDW and create emp & dept tables (DDL with Oracle data type and constraints) and insert data.
 
 
-SQL Procedures Script - copy and save in aa file: vhol.hql 
+SQL Procedures Script - copy and save in a file: emp.ddl 
 
 ```sql
 
