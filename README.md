@@ -762,7 +762,7 @@ BEGIN
   dbg(debug_level, 'pro: total_arriaval_delay v_iata value: ' || v_iata || ' v_arrdelay: '||v_arr_delay );
   v_top_flights = '';
 
-  select sum(arrdelay) into v_totaldelay
+  select nvl(sum(arrdelay),0) into v_totaldelay
     from flights_orc 
     where origin = v_iata; 
 
@@ -835,8 +835,7 @@ WHILE SQLCODE=0 THEN
 
   v_msg = 'airport:'||v_iata|| ' top flights: '|| v_top ||' total delay:'||v_total;
   dbg(debug_level,  'main: 4 IN_OUT '||v_msg);
-
-  insert into  airports_experiences values( v_iata, v_top, v_total);
+  if v_total > 0.0  insert into  airports_experiences values( v_iata, v_top, v_total);
 
   FETCH cur INTO v_iata; 
 END WHILE;
@@ -850,7 +849,19 @@ END;
 
 end;
 
+```
 
+
+Run beeline to create the database application
+
+```sql
+$ beeline -u "jdbc:hive2://hs2-vhol-cdw2-nosso.env-hvmrdx.dw.a465-9q4k.cloudera.site/default;transportMode=http;httpPath=cliservice;ssl=true;retries=3;mode=hplsql;" -n frothkoetter -p $PW -f /tmp/vhol.hql
+```
+
+
+Now run the Analytics for a individual airport
+
+```sql
 drop table if exists airports_experiences;
 create table airports_experiences(iata string, delay_top_flights string, delay_total double  ) ;
 begin
@@ -858,24 +869,37 @@ begin
  CALL airport_experience.generate( 'SFO');
  CALL airport_experience.generate( 'JFK');
  CALL airport_experience.generate( 'BOS');
- CALL airport_experience.generate( '*');
 end;
 select * from airports_experiences;
 
 ```
 
-Run beeline
-
 ```sql
-$ beeline -u "jdbc:hive2://hs2-vhol-cdw2-nosso.env-hvmrdx.dw.a465-9q4k.cloudera.site/default;transportMode=http;httpPath=cliservice;ssl=true;retries=3;mode=hplsql;" -n frothkoetter -p $PW -f /tmp/vhol.hql
-```
-
 Results
 
 | airports_stats.iata  |        airports_stats.delay_top_flights        | airports_stats.delay_total  |
 | :- | :- | :- |
 | JFK                  | AA647:91067.0;AA177:87305.0;AA1639:82770.0;    | 1.0155716E7                 |
 | LAX                  | DL1579:68519.0;DL1565:49367.0;WN1517:48037.0;  | 1.795024E7                  |
+
+Create dataset for  all airports
+
+
+```sql
+
+BEGIN
+ DECLARE v_iata string default 'JFK';
+ DECLARE cur CURSOR FOR 'SELECT iata from airports_orc where iata not in (select iata from airports_experiences)';
+ OPEN cur;
+  FETCH cur INTO v_iata; 
+  WHILE SQLCODE=0 THEN
+     CALL airport_experience.generate( v_iata); 
+  FETCH cur INTO v_iata; 
+  END WHILE;
+ CLOSE cur;
+END;
+```
+
 
 ### HPLSQL - Oracle Migration
 
