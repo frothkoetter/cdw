@@ -835,7 +835,11 @@ WHILE SQLCODE=0 THEN
 
   v_msg = 'airport:'||v_iata|| ' top flights: '|| v_top ||' total delay:'||v_total;
   dbg(debug_level,  'main: 4 IN_OUT '||v_msg);
-  if v_total > 0.0  insert into  airports_experiences values( v_iata, v_top, v_total);
+  if v_total > 0.0 
+    BEGIN
+     insert into  airports_experiences values( v_iata, v_top, v_total);
+     dbg(debug_level,  'main: 5 row inserted with SQLCODE '|| SQLCODE );
+    END;
 
   FETCH cur INTO v_iata; 
 END WHILE;
@@ -874,7 +878,7 @@ select * from airports_experiences;
 
 ```
 
-```sql
+
 Results
 
 | airports_stats.iata  |        airports_stats.delay_top_flights        | airports_stats.delay_total  |
