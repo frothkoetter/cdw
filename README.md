@@ -41,9 +41,13 @@ USE DB_USER0**;
 
 ```
 Your can check your current database 
-```sql
+``` Hive 
 select current_database();
 ```
+``` Impala
+select current_database();
+```
+
 -----
 ## Lab 2 - External Tables
 
