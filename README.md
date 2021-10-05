@@ -41,7 +41,7 @@ USE DB_USER0**;
 
 ```
 Your can check your current database 
-```sql
+```sql 
 select current_database();
 ```
 -----
@@ -412,11 +412,6 @@ group by
 
 Create materialized view (MV). This will cause Hive to transparently rewrite queries, when possible, to use the MV instead of the base tables.
 
-Add constraints for better query and refresh 
-```sql
-ALTER TABLE airlines_orc ADD CONSTRAINT airlines_pk PRIMARY KEY (code) DISABLE NOVALIDATE;
-ALTER TABLE flights_orc ADD CONSTRAINT airlines_fk FOREIGN KEY (uniquecarrier) REFERENCES airlines_orc(code) DISABLE NOVALIDATE RELY;
-```
 Create Materialized View
 ```sql
 DROP MATERIALIZED VIEW IF EXISTS traffic_cancel_airlines;
