@@ -58,7 +58,7 @@ CREATE EXTERNAL TABLE flights_csv(month int, dayofmonth int,
  depdelay int, origin string, dest string, distance int, taxiin int, 
  taxiout int, cancelled int, cancellationcode string, diverted string, 
  carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, 
-lateaircraftdelay int) 
+lateaircraftdelay int, year int) 
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
 STORED AS TEXTFILE LOCATION '/airlinedata-csv/flights' tblproperties("skip.header.line.count"="1");
 
@@ -76,7 +76,7 @@ CREATE EXTERNAL TABLE airports_csv(iata string, airport string, city string, sta
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
 STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.header.line.count"="1");
 
-drop table if exists unique_tickets;
+drop table if exists unique_tickets_csv;
 CREATE external TABLE unique_tickets_csv (ticketnumber BIGINT, leg1flightnum BIGINT, leg1uniquecarrier STRING, leg1origin STRING,   leg1dest STRING, leg1month BIGINT, leg1dayofmonth BIGINT,   
  leg1dayofweek BIGINT, leg1deptime BIGINT, leg1arrtime BIGINT,   
  leg2flightnum BIGINT, leg2uniquecarrier STRING, leg2origin STRING,   
@@ -215,8 +215,8 @@ drop table if exists unique_tickets_orc;
 create table unique_tickets_orc as select * from unique_tickets_csv;
 
 drop table if exists flights_orc;
-create table flights_orc partitioned by (month) as 
-select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
+create table flights_orc partitioned by (year) as 
+select year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
 from flights_csv;
 
 ```
