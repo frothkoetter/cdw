@@ -1039,7 +1039,7 @@ You now can travel back to one of the versions using SYSTEM_VERSION or SYSTEM_TI
 
 ```sql
 set hive.vectorized.execution.enabled = false;
-select year,count(*) from flights_iice
+select year,count(*) from flights_ice
 FOR SYSTEM_VERSION AS OF 7097750832501567062
 group by year order by year;
 ```
@@ -1047,7 +1047,7 @@ or
 
 ```sql
 set hive.vectorized.execution.enabled = false;
-select year, count(*) from airline_ontime_ice.flights_ice
+select year, count(*) from flights_ice
 FOR SYSTEM_TIME AS OF '2021-11-01 10:29:13.509Z'
 group by year order by year;
 ```
