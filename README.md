@@ -996,7 +996,7 @@ set hive.vectorized.execution.enabled = false;
 
 drop table if exists flights_ice;
 
-CREATE EXTERNAL TABLE flights_ice(dayofmonth int, 
+CREATE EXTERNAL TABLE flights_ice(month int, dayofmonth int, 
  dayofweek int, deptime int, crsdeptime int, arrtime int, 
  crsarrtime int, uniquecarrier string, flightnum int, tailnum string, 
  actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int, 
@@ -1004,32 +1004,32 @@ CREATE EXTERNAL TABLE flights_ice(dayofmonth int,
  taxiout int, cancelled int, cancellationcode string, diverted string, 
  carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, 
 lateaircraftdelay int) 
-partitioned by (month int) 
+partitioned by (year int) 
 STORED BY 'org.apache.iceberg.mr.hive.HiveIcebergStorageHandler';
 
 insert into flights_ice 
-select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
-from flights_orc where month = 1;
+select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year 
+from flights_orc where year = 1995;
 
 insert into flights_ice 
-select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
-from flights_orc where month = 2;
+select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year 
+from flights_orc where year = 1996;
 
 insert into flights_ice 
-select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
-from flights_orc where month not in (1,2);
+select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year
+from flights_orc where month not in (1995,1996);
 
 ```
-No w we should habe all rows  iinn the new table.
-Let's show the Snapshots.
+No we should habe all rows in the new table.
+Let's show the Snapshots, add the databasename 
 ```sql
 set hive.vectorized.execution.enabled = false;
-select * from airline_ontime_ice.flights.history;
+select * from airlinedata.flights_ice.history;
 
 ``` 
 You should have 3 snapshots of the table in the output, one for each insert. 
 
-|FLIGHTS.MADE_CURRENT_AT |	FLIGHTS.SNAPSHOT_ID	|FLIGHTS.PARENT_ID	|FLIGHTS.IS_CURRENT_ANCESTOR|
+|FLIGHTS.MADE_CURRENT_AT |	FLIGHTS_ICE.SNAPSHOT_ID	|FLIGHTS.PARENT_ID	|FLIGHTS.IS_CURRENT_ANCESTOR|
 | :- | :- | :- | :- |
 2021-11-01 09:29:12.509 Z|	7097750832501567062	| null |	true
 |2021-11-01 09:56:21.464 Z|	5696129515471947086	| 7097750832501567062 | true |
@@ -1039,17 +1039,17 @@ You now can travel back to one of the versions using SYSTEM_VERSION or SYSTEM_TI
 
 ```sql
 set hive.vectorized.execution.enabled = false;
-select count(*) from airline_ontime_ice.flights
+select year,count(*) from flights_iice
 FOR SYSTEM_VERSION AS OF 7097750832501567062
-group by year;
+group by year order by year;
 ```
 or 
 
 ```sql
 set hive.vectorized.execution.enabled = false;
-select year, count(*) from airline_ontime_ice.flights
+select year, count(*) from airline_ontime_ice.flights_ice
 FOR SYSTEM_TIME AS OF '2021-11-01 10:29:13.509Z'
-group by year;
+group by year order by year;
 ```
 
 ### Data Sketches
