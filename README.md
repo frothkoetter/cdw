@@ -1183,6 +1183,11 @@ Results
 
 Hive has support for AES functions to encrypt or decrypt individual columns. 
 
+In this example we create a new table: manufactors_crypt and store the field 
+manufactor from the plances_orc table in a encrypted AES format. The 2nd parameter
+of the aes_encrypt or aes_decrypt functions are the secret key. The sixteen 
+character are good for a 128bit encryption, for 256bit use 32 characters.  
+
 ```sql
 drop table if exists manufactors_crypt;create table manufactors_crypt(id BIGINT DEFAULT SURROGATE_KEY() , description_crypt string);INSERT into manufactors_crypt( description_crypt )select base64( aes_encrypt(manufacturer,'1234567890123456'))from planes_orc where planes_orc.manufacturer is not NULL group by manufacturer;SELECT description_crypt, aes_decrypt(unbase64(description_crypt),'1234567890123456') descriptionfrom manufactors_cryptwhere description_crypt is not NULL;
 ```
