@@ -1179,5 +1179,20 @@ Results
 
 
 
+### Cryptographic Functions
+
+Hive has support for AES functions to encrypt or decrypt individual columns. 
+
+```sql
+drop table if exists manufactors_crypt;create table manufactors_crypt(id BIGINT DEFAULT SURROGATE_KEY() , description_crypt string);INSERT into manufactors_crypt( description_crypt )select base64( aes_encrypt(manufacturer,'1234567890123456'))from planes_orc where planes_orc.manufacturer is not NULL group by manufacturer;SELECT description_crypt, aes_decrypt(unbase64(description_crypt),'1234567890123456') descriptionfrom manufactors_cryptwhere description_crypt is not NULL;
+```
+
+Results
+
+|DESCRIPTION\_CRYPT|DESCRIPTIION|
+| :- | :- |
+|RhTzKHhSBr7RD3pGudQG3g==|	AEROSPATIALE|
+|S0w4E8xFm3q1FaeKG99NAaNG7uqU2XAsD2A94p79NYk=|	AEROSPATIALE/ALENIA|
+|HIL21crGdEnSYvLIqiKzNQ==|	AIRBUS|
 
 
