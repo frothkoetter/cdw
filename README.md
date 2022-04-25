@@ -695,12 +695,9 @@ DROP DATABASE DBB_USER0** CASCADE;
 ### HPLSQL - Database Applications
 
 
-Login into a K8s pod with hiveserver2 CDW and create the procedures
+This HPLSQL Package run a analyse by airport and list the top delayed flights in one single field (denormalized).
 
-
-This HPLSQL Package run a analyse by airport and list the top delayed flights inone single field (denormalized).
-
-SQL Procedures Script - copy and save in aa file: vhol.hql 
+SQL Procedures Script - copy and paste to Hue
 
 ```sql
 
@@ -853,12 +850,7 @@ end;
 
 ```
 
-
-Run beeline to create the database application
-
-```sql
-$ beeline -u "jdbc:hive2://hs2-vhol-cdw2-nosso.env-hvmrdx.dw.a465-9q4k.cloudera.site/default;transportMode=http;httpPath=cliservice;ssl=true;retries=3;mode=hplsql;" -n frothkoetter -p $PW -f /tmp/vhol.hql
-```
+Open Hue HPL/SQL Editor and create the above package.
 
 
 Now run the Analytics for a individual airport
