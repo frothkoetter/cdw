@@ -590,7 +590,7 @@ For the next step we will switch to the UI of Atlas, the CDP component responsib
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.006.png)
 
-This should open the Atlas UI. CDP comes with a newer, improved user interface which can be enabled through the “Switch to Beta UI” link on the bottom right side of the screen. Do this now.
+This should open the Atlas UI. CDP comes with a newer, improved user interface which can be enabled through the __“Switch to Beta”__ item in the user menu on the upper right corner of the screen. Do this now.
 
 The Atlas UI has a left column which lists the Entities, Classifications, Business Metadata and Glossaries that belong to your CDP Environment.
 
@@ -604,7 +604,10 @@ Select the “Tables” tab (the rightmost)
 
 Select the “emp\_all” table from the list, this will result in Atlas displaying the metadata for this table; select the “lineage” tab:
    ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.009.png)
-This lineage graph shows the inputs, outputs as well as the processing steps resulting from the execution of our SQL code in the Data Warehouse. Clicking on one of the nodes will display a popup menu, which allows us to navigate through the lineage graph.
+This lineage graph shows the inputs, outputs as well as the processing steps resulting from the execution of our SQL code in the Data Warehouse. 
+
+The red circle marks the currently selected entity. Atlas will always display the current entity's type in braces next to the entity name (middle, top of the page, e.g. "hive_table"). Clicking on one of the nodes will display a popup menu, which allows us to navigate through the lineage graph.
+
    Click on the “emp\_age” input table and select the link (the “guid” attribute) in the resulting popup menu:
    ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.010.png)
 
@@ -1051,7 +1054,8 @@ select year, count(*) from flights_ice
 FOR SYSTEM_TIME AS OF '2021-11-01 10:29:13.509Z'
 group by year order by year;
 ```
-
+
+
 ### Data Sketches
 
 You can use Datasketch algorithms for queries that take too long to calculate exact results due to very large data sets (e.g. number of distinct values).
@@ -1189,7 +1193,22 @@ of the aes_encrypt or aes_decrypt functions are the secret key. The sixteen
 character are good for a 128bit encryption, for 256bit use 32 characters.  
 
 ```sql
-drop table if exists manufactors_crypt;create table manufactors_crypt(id BIGINT DEFAULT SURROGATE_KEY() , description_crypt string);INSERT into manufactors_crypt( description_crypt )select base64( aes_encrypt(manufacturer,'1234567890123456'))from planes_orc where planes_orc.manufacturer is not NULL group by manufacturer;SELECT description_crypt, aes_decrypt(unbase64(description_crypt),'1234567890123456') descriptionfrom manufactors_cryptwhere description_crypt is not NULL;
+drop table if exists manufactors_crypt;
+
+create table manufactors_crypt
+(id BIGINT DEFAULT SURROGATE_KEY() , description_crypt string);
+
+INSERT into manufactors_crypt( description_crypt )
+select base64( aes_encrypt(manufacturer,'1234567890123456'))
+from planes_orc 
+where planes_orc.manufacturer 
+is not NULL 
+group by manufacturer;
+
+SELECT description_crypt, aes_decrypt(unbase64(description_crypt),
+'1234567890123456') description
+from manufactors_crypt
+where description_crypt is not NULL;
 ```
 
 Results
