@@ -884,22 +884,30 @@ Results
 | JFK                  | AA647:91067.0;AA177:87305.0;AA1639:82770.0;    | 1.0155716E7                 |
 | LAX                  | DL1579:68519.0;DL1565:49367.0;WN1517:48037.0;  | 1.795024E7                  |
 
-Create dataset for  all airports
+Create dataset for top 100 airports
 
 
 ```sql
-
-BEGIN
- DECLARE v_iata string default 'JFK';
- DECLARE cur CURSOR FOR 'SELECT iata from airports_orc where iata not in (select iata from airports_experiences)';
- OPEN cur;
-  FETCH cur INTO v_iata; 
-  WHILE SQLCODE=0 THEN
-     CALL airport_experience.generate( v_iata); 
-  FETCH cur INTO v_iata; 
-  END WHILE;
- CLOSE cur;
+drop table if exists airports_experiences;
+create table airports_experiences(iata string, delay_top_flights string, delay_total double  ) ;
+begin
+declare c_iata string;
+declare c_anz int;
+declare cur cursor as select origin, count(*) anz 
+       from flights_orc 
+       group by origin 
+       order by anz desc 
+       limit 100;
+open cur;
+FETCH cur INTO  c_iata, c_anz;
+     WHILE SQLCODE=0 THEN
+     DBMS_OUTPUT.PUT_LINE( 'airport:' || c_iata || ' Anzahl Flüge:' || c_anz );
+     CALL airport_experience.generate( c_iata); 
+    FETCH cur INTO c_iata, c_anz;
+   END WHILE;
+CLOSE cur;
 END;
+/
 ```
 
 
