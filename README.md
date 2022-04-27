@@ -467,7 +467,7 @@ Now we see the query returns subset of data from the first insert.
 | _c0 |	
 | :- |
 | 5327435 |
-
+``
 Partition Evolution is a feature when table layout can be updated as data or queries change.
 
 ![](images/IcebergPartitionEvo.png)
