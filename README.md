@@ -347,64 +347,6 @@ group by
 ```
 
 
-Number of passengers on airlines that have elongated layovers for an international flight caused by delayed connection
-```sql 
-SELECT 
-   a.leg1uniquecarrier as carrier, 
-   count(a.leg1uniquecarrier) as passengers 
-FROM 
-   unique_tickets_orc a, 
-   flights_orc o, 
-   flights_orc d
-where 
-       a.leg1flightnum = o.flightnum
-   AND a.leg1uniquecarrier = o.uniquecarrier 
-   AND a.leg1origin = o.origin 
-   AND a.leg1dest = o.dest 
-   AND a.leg1month = o.month 
-   AND a.leg1dayofmonth = o.dayofmonth
-   AND a.leg1dayofweek = o.`dayofweek` 
-   AND a.leg2flightnum = d.flightnum
-   AND a.leg2uniquecarrier = d.uniquecarrier 
-   AND a.leg2origin = d.origin 
-   AND a.leg2dest = d.dest 
-   AND a.leg2month = d.month 
-   AND a.leg2dayofmonth = d.dayofmonth
-   AND a.leg2dayofweek = d.`dayofweek` 
-   AND o.depdelay > 60
-group by 
-   a.leg1uniquecarrier;
-```
-
-Number of passengers on airlines that have elongated layovers for an international flight caused by missed connection
-```sql
-SELECT 
-   a.leg1uniquecarrier as carrier, 
-   count(a.leg1uniquecarrier) as passengers
---   o.arrdelay as delay
-FROM 
-   unique_tickets_orc a, 
-   flights_orc o, 
-   flights_orc d
-where 
-       a.leg1flightnum = o.flightnum
-   AND a.leg1uniquecarrier = o.uniquecarrier 
-   AND a.leg1origin = o.origin 
-   AND a.leg1dest = o.dest 
-   AND a.leg1month = o.month 
-   AND a.leg1dayofmonth = o.dayofmonth
-   AND a.leg1dayofweek = o.`dayofweek` 
-   AND a.leg2flightnum = d.flightnum
-   AND a.leg2uniquecarrier = d.uniquecarrier 
-   AND a.leg2origin = d.origin 
-   AND a.leg2dest = d.dest 
-   AND a.leg2month = d.month 
-   AND a.leg2dayofmonth = d.dayofmonth
-   AND a.leg2dayofweek = d.`dayofweek` 
-   AND d.deptime-o.arrtime < o.arrdelay-45
-group by 
-   a.leg1uniquecarrier;
-```
 -----
 ## Lab 4 - Materialized View
 
@@ -452,10 +394,88 @@ Run the explain and query rewrite should show like:
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.003.png)
 
+------
+## Lab 5 - Time Travel and Parition Evolution
+
+Cloudera Iceberg is a high-performance format for huge analytic tables for engines like Spark, Impala Flink and Hive to safely work with the same tables, at the same time. 
+
+Creatint a partitioned table with CREATE TABLE ... PARTITIONED BY & STORED BY ICEBERY syntax enables you to create identity-partitioned Iceberg tables. Identity-partitioned Iceberg tables are similar to the regular partitioned tables and are stored in the same directory structure as the regular partitioned tables. 
+
+The difference is that the data files in the identity-partitioned Iceberg tables continue to store the partitioning columns. 
+
+Lets create a new table with Iceberg format and insert rows in batches:
+
+```sql
+drop table if exists flights_ice; 
+ 
+create table flights_ice(month int, dayofmonth int,  
+ dayofweek int, deptime int, crsdeptime int, arrtime int,  
+ crsarrtime int, uniquecarrier string, flightnum int, tailnum string,  
+ actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int,  
+ depdelay int, origin string, dest string, distance int, taxiin int,  
+ taxiout int, cancelled int, cancellationcode string, diverted string,  
+ carrierdelay int, weatherdelay int, nasdelay int, securitydelay int,  
+lateaircraftdelay int)  
+partitioned by (year int)  
+stored by ICEBERG;
+
+insert into flights_ice  
+select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year  
+from flights_orc where year = 1995; 
+  
+insert into flights_ice  
+select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year 
+from flights_orc where year not in (1995); 
+```
+
+No we all rows with three inserts in the table, and can show the snapshots.
+
+First check the rows in the table. 
+Note* - currently we must disable the vectorized execution in Hive 
+
+```sql
+set hive.vectorized.execution.enabled = false;
+select count(*) from flights_ice;
+```
+
+Result should be are all 86 mil rows.
+
+| _c0 |	
+| :- |
+| 86289323 |
+
+```sql
+select * from airlinedata.flights_ice.history;
+```
+
+You should have two snapshots of the table in the output, one for each insert. 
+
+|FLIGHTS.MADE_CURRENT_AT |	FLIGHTS_ICE.SNAPSHOT_ID	|FLIGHTS.PARENT_ID	|FLIGHTS.IS_CURRENT_ANCESTOR|
+| :- | :- | :- | :- |
+2021-11-01 09:29:12.509 Z|	7097750832501567062	| null |	true
+|2021-11-01 09:56:21.464 Z|	5696129515471947086	| 7097750832501567062 | true |
+
+
+You now can time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME - pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace the XXXXXXXXXXXXXXX
+
+```sql
+set hive.vectorized.execution.enabled = false;
+select year,count(*) from flights_ice
+FOR SYSTEM_VERSION AS OF XXXXXXXXXXXXXXX
+group by year order by year;
+```
+Now we see the subset of the snapshot.
+| _c0 |	
+| :- |
+| 5327435 |
+
+
+Partition Evolution is a feature when table layout can be updated as data or queries change.
+
 
 
 ------
-## Lab 5 - Slowly Changing Dimensions (SCD) - TYPE 2
+## Lab 6 - Slowly Changing Dimensions (SCD) - TYPE 2
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
@@ -983,77 +1003,6 @@ Result
 | SMITH   | RESEARCH    | CLERK      | 7369   | 1993-06-13  | DALLAS    |
 | TURNER  | SALES       | SALESMAN   | 7844   | 1995-06-04  | CHICAGO   |
 | WARD    | SALES       | SALESMAN   | 7521   | 1996-03-26  | CHICAGO   |
-
-### Iceberg - Timetravel
-
-Create a partitioned table
-The CREATE TABLE ... PARTITIONED BY & STORED BY syntax enables you to create identity-partitioned Iceberg tables. Identity-partitioned Iceberg tables are similar to the regular partitioned tables and are stored in the same directory structure as the regular partitioned tables. The difference is that the data files in the identity-partitioned Iceberg tables continue to store the partitioning columns. 
-
-
-Only identity-partitioned Iceberg tables can be created through Hive. If other systems create Iceberg tables with different partitioning, then they could still be read from Hive.
-
-
-```sql
-set iceberg.mr.catalog = hive;
-set hive.vectorized.execution.enabled = false;
-
-drop table if exists flights_ice;
-
-CREATE EXTERNAL TABLE flights_ice(month int, dayofmonth int, 
- dayofweek int, deptime int, crsdeptime int, arrtime int, 
- crsarrtime int, uniquecarrier string, flightnum int, tailnum string, 
- actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int, 
- depdelay int, origin string, dest string, distance int, taxiin int, 
- taxiout int, cancelled int, cancellationcode string, diverted string, 
- carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, 
-lateaircraftdelay int) 
-partitioned by (year int) 
-STORED BY 'org.apache.iceberg.mr.hive.HiveIcebergStorageHandler';
-
-insert into flights_ice 
-select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year 
-from flights_orc where year = 1995;
-
-insert into flights_ice 
-select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year 
-from flights_orc where year = 1996;
-
-insert into flights_ice 
-select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year
-from flights_orc where month not in (1995,1996);
-
-```
-No we should habe all rows in the new table.
-Let's show the Snapshots, add the databasename 
-```sql
-set hive.vectorized.execution.enabled = false;
-select * from airlinedata.flights_ice.history;
-
-``` 
-You should have 3 snapshots of the table in the output, one for each insert. 
-
-|FLIGHTS.MADE_CURRENT_AT |	FLIGHTS_ICE.SNAPSHOT_ID	|FLIGHTS.PARENT_ID	|FLIGHTS.IS_CURRENT_ANCESTOR|
-| :- | :- | :- | :- |
-2021-11-01 09:29:12.509 Z|	7097750832501567062	| null |	true
-|2021-11-01 09:56:21.464 Z|	5696129515471947086	| 7097750832501567062 | true |
-|2021-11-01 11:01:48.849 Z	|8958092990870365460 | 569612951547194708 |true |
-
-You now can travel back to one of the versions using SYSTEM_VERSION or SYSTEM_TIME
-
-```sql
-set hive.vectorized.execution.enabled = false;
-select year,count(*) from flights_ice
-FOR SYSTEM_VERSION AS OF 7097750832501567062
-group by year order by year;
-```
-or 
-
-```sql
-set hive.vectorized.execution.enabled = false;
-select year, count(*) from flights_ice
-FOR SYSTEM_TIME AS OF '2021-11-01 10:29:13.509Z'
-group by year order by year;
-```
 
 
 ### Data Sketches
