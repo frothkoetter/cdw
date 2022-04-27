@@ -474,8 +474,9 @@ Partition Evolution is a feature when table layout can be updated as data or que
 
 ![](images/PartitionEvolution.png)
 
+With Iceberg’s hidden partition, a separation between physical and logical, users are not required to maintain partition columns.  
 
-
+Iceberg tables can evolve partition schemas over time as data volume changes.
 
 ------
 ## Lab 6 - Slowly Changing Dimensions (SCD) - TYPE 2
