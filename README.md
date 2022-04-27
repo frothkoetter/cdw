@@ -474,9 +474,37 @@ Partition Evolution is a feature when table layout can be updated as data or que
 
 With Iceberg’s hidden partition, a separation between physical and logical, users are not required to maintain partition columns.  
 
-Lets change the partition and add the month:
+Lets change the partition add YEAR & MONTH, and insert data for another year:
 
 ```sql
+alter table flights_ice SET PARTITION SPEC (year,month); 
+
+insert into flights_ice  
+select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,  
+uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay,  
+origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, 
+nasdelay, securitydelay, lateaircraftdelay, 2022 
+from flights_orc where year = 1995; 
+```
+Now lets see the impact what the differnece is, lets run two queries and note the complete time:
+
+Count the records for one year and month:
+```sql
+select year, month, count(1) from flights_ice where  year = 1995 and month = 1 group by year, month; 
+```
+
+In Hue you can find the runtime at the end of the output:
+
+INFO  : Completed executing command(queryId=hive_20220427111723_1f126db0-84aa-4df6-b0a1-065a4f9001e4); Time taken: 3.966 seconds
+
+
+```sql
+select year, month, count(1) from flights_ice where  year = 2022 and month = 1 group by year, month; 
+ ```
+
+INFO  : Completed executing command(queryId=hive_20220427111723_1f126db0-84aa-4df6-b0a1-065a4f9001e4); Time taken: 0.466 seconds
+
+This expample shows that the execution time is 1/10 massive decreased. 
 
 
 ------
