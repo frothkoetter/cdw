@@ -401,8 +401,6 @@ Cloudera Iceberg is a high-performance format for huge analytic tables for engin
 
 Creatint a partitioned table with CREATE TABLE ... PARTITIONED BY & STORED BY ICEBERY syntax enables you to create identity-partitioned Iceberg tables. Identity-partitioned Iceberg tables are similar to the regular partitioned tables and are stored in the same directory structure as the regular partitioned tables. 
 
-The difference is that the data files in the identity-partitioned Iceberg tables continue to store the partitioning columns. 
-
 Lets create a new table with Iceberg format and insert rows in batches:
 
 ```sql
@@ -444,16 +442,17 @@ Result should be are all 86 mil rows.
 | :- |
 | 86289323 |
 
+Now you can check the table histroy, change the database name and run the command:
 ```sql
-select * from airlinedata.flights_ice.history;
+select * from DB_userXXX.flights_ice.history;
 ```
 
-You should have two snapshots of the table in the output, one for each insert. 
+You should see two snapshots of the table in the output, one for each insert. 
 
 |FLIGHTS.MADE_CURRENT_AT |	FLIGHTS_ICE.SNAPSHOT_ID	|FLIGHTS.PARENT_ID	|FLIGHTS.IS_CURRENT_ANCESTOR|
 | :- | :- | :- | :- |
-2021-11-01 09:29:12.509 Z|	7097750832501567062	| null |	true
-|2021-11-01 09:56:21.464 Z|	5696129515471947086	| 7097750832501567062 | true |
+2022-05-01 09:29:12.509 Z|	7097750832501567062 | null | true |
+2022-05-01 09:56:21.464 Z|	5696129515471947086 | 7097750832501567062 | true |
 
 
 You now can time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME - pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace the XXXXXXXXXXXXXXX
@@ -464,11 +463,10 @@ select year,count(*) from flights_ice
 FOR SYSTEM_VERSION AS OF XXXXXXXXXXXXXXX
 group by year order by year;
 ```
-Now we see the subset of the snapshot.
+Now we see the query returns subset of data from the first insert. 
 | _c0 |	
 | :- |
 | 5327435 |
-
 
 Partition Evolution is a feature when table layout can be updated as data or queries change.
 
@@ -476,8 +474,10 @@ Partition Evolution is a feature when table layout can be updated as data or que
 
 With Iceberg’s hidden partition, a separation between physical and logical, users are not required to maintain partition columns.  
 
+Lets change the partition and add the month:
 
-Iceberg tables can evolve partition schemas over time as data volume changes.
+```sql
+
 
 ------
 ## Lab 6 - Slowly Changing Dimensions (SCD) - TYPE 2
