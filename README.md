@@ -472,6 +472,9 @@ Now we see the subset of the snapshot.
 
 Partition Evolution is a feature when table layout can be updated as data or queries change.
 
+![](images/Partition Evolution .png)
+
+
 
 
 ------
