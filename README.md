@@ -588,7 +588,7 @@ Results
 
 
 -----
-## Lab 6 - Data Security & Governance 
+## Lab 7 - Data Security & Governance 
 
 The combination of the Data Warehouse with SDX offers a list of powerful features like rule-based masking columns based on a user’s role and/or group association or rule-based row filters. 
 
@@ -693,7 +693,7 @@ In the Ranger UI, select the “Audit” menu and limit the amount of data displ
 
 
 -----
-## Lab 7 - Data Visualization
+## Lab 8 - Data Visualization
 
 
 1. Use Data Visualization to further explore the data set.
