@@ -809,6 +809,7 @@ This works asyncronus in the background can you can observe the status with
 ```sql
 show compactions;
 ```
+
 Results
 
 | :------------- | :----- | :------ | :------ | :----- | :----- | :----- | :----- | :----- | :----- | :------ | : ------ | :----- |
