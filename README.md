@@ -772,7 +772,51 @@ Search in the result the numFiles and numPartitions
 
 
 |numFiles  |          	12  |                
-|numPartitions  |     	12  |        
+|numPartitions  |     	12  |  
+
+Now lets update the table and see the impact
+
+```sql
+update flights set taxiin = 1
+where 
+ month = 1;
+
+update flights set taxiin = 2 
+where 
+ month = 2;
+
+describe formatted flights;
+```
+
+Search agin the numFiles and numPartitions
+
+
+|numFiles  |          	16  |                
+|numPartitions  |     	12  |  
+
+Now we start a manual compaction for the table partitions
+
+```sql
+alter table flights partition (month='1') compact 'major';
+alter table flights partition (month='2') compact 'major';
+```
+
+This works asyncronus in the background can you can observe the status with
+
+```sql
+show compactions;
+```
+
+|compactionid	| dbname	|tabname |	partname | type|state	|workerhost	|workerid	|enqueuetime|starttime |duration |hadoopjobid|errormessage 
+| :- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |
+|1 |	airlinedata_ws	|flights	|month=2|	|MAJOR	|succeeded	|yjnam-yakurut-oozie-master0.se-sandb.a465-9q4k.cloudera.site	66	|1666787018950	|1666787023591	|62 |	None|	 --- 	hiveserver2-0.hiveserver2-service.compute-1666592462-45jk.svc.cluster.local	manual
+| :- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |
+
+
+Compaction does help with the small file problems as it eliminates the deltas and their buckets. 
+
+Compaction does NOT reduce the number of base buckets for the table/partition and the rows don’t move between buckets (which can lead to unbalanced data skew in the bucket files). A full table rewrites would solve this issue. 
+
 
 ### HPLSQL - Database Applications
 
