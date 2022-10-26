@@ -751,7 +751,7 @@ DROP DATABASE DBB_USER0** CASCADE;
 
 ### Hive Compaction
 
-Compaction is a ‘subsystem’ within Hive to implement the most critical type of Acid housekeeping task: merging the delta changes together to reduce the read-path overhead of reading current state from across multiple deltas.
+Hive compaction is a ‘subsystem’ within Hive to implement the most critical type of ACID housekeeping task: merging the delta changes together to reduce the read-path overhead of reading current state from across multiple deltas.
 
 Compaction workflow is fully asynchronous:
 
@@ -764,6 +764,9 @@ Minor compaction merges deltas but does not merge original base.
 ![](images/images102.png)
 
 Major compaction merges old base (if exists) with deltas - creates new base .
+![](images/images103.png)
+
+Let's see how Hive compaction works in practice.
 
 ```sql
 describe formatted flights;
