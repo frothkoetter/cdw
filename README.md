@@ -791,7 +791,7 @@ where
 describe formatted flights;
 ```
 
-Search agin the numFiles and numPartitions
+Search agin the numFiles and notice the numFiles is increased
 
 
 |numFiles  |          	16  |                
@@ -815,8 +815,9 @@ show compactions;
 |1 |	airlinedata_ws	|flights	|month=2|	|MAJOR	|succeeded	|yjnam-yakurut-oozie-master0.se-sandb.a465-9q4k.cloudera.site	66	|1666787018950	|1666787023591	|62 |	None|	 --- 	hiveserver2-0.hiveserver2-service.compute-1666592462-45jk.svc.cluster.local	manual
 | :- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |
 
+When the compaction is completed you can lookup the numFiles and find the reduced number. 
 
-Compaction does help with the small file problems as it eliminates the deltas and their buckets. 
+Compaction does helps with the small file problem as it eliminates the deltas and their buckets. 
 
 Compaction does NOT reduce the number of base buckets for the table/partition and the rows don’t move between buckets (which can lead to unbalanced data skew in the bucket files). A full table rewrites would solve this issue. 
 
