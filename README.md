@@ -134,13 +134,14 @@ QUERY: Find what engines in these airplanes causing the delays
 DESCRIPTION: Ad Hoc Exploration
 
 ```sql
-SELECT p.model, p.engine_type
-FROM planes_csv p
-where tailnum  IN ('N194JB',
-                          'N906S',
-                          'N575ML',
-                          'N852NW',
-                          'N000AA');
+SELECT
+ p.model,
+ p.engine_type
+FROM
+ planes_csv p
+where
+ tailnum IN ('N194JB', 'N906S', 'N575ML', 'N852NW', 'N000AA');
+
 ```
 
 Results:
