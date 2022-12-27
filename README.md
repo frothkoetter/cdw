@@ -105,7 +105,7 @@ DESCRIPTION: Customer Experience Reporting showing airplanes that have the highe
 ```sql
 SELECT tailnum  as aircraft_number,
        count(*) as cnt_delays,
-       avg(nvl(depdelay,0)) AS avg_delay,
+       avg(nvl(depdelay,0)) AS avg_delay
 FROM flights_csv
 GROUP BY tailnum
 ORDER BY avg_delay DESC;
@@ -115,12 +115,14 @@ Note: Runing the first time may take a clouple minutes.
 
 Results
 
-|TAILNUM	| _C1|	AVG_DELAY|	_C3| _C4 |	_C5	| _C6 | _C7 | _C8 | _C9 | _C10	|_C11	| _C12	| _C13	| _C14 | _C15 |	_C16 |
-| :- | :- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |:- |
-|N702AW	|1	|null	|null	|0.0	|1.0	|0.0 |0 | 0.0 |0 |0.0| 0 |0.0 |0 |null |null |843.0 |
-N662??	| 1	|null	|null	|0.0	|1.0	|null |null |null	| null	|null	|null	|null	|null	|null |null	|528.0|
-|N043BR	|1	|null	|null	|0.0	|1.0	|0.0	|0	|0.0 |0	|0.0	|0	|0.0	|0	|null	|null	|224.0|
-
+|aircraft	| avg_delay |	 cnt_delays|
+| :- | :- |:- |
+|N194JB	| 180	| 1	|
+|N906S	| 178	| 1 |
+|N575ML	| 145.5	| 2	|
+|N852NV	| 100	| 13	|
+...
+| :- | :- |:- |
 
 QUERY: Aircrafts most delays
 
