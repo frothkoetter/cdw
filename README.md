@@ -13,19 +13,6 @@ Enitiy-Relation Diagram of tables we use in todays workshop:
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.002.png)
 
-## Lab Setup
-
-
-
-You have to set your **workload password**.
-
-- [x] Click on username in the bottom left
-- [x] Click Profile
-- [x] Click “Set Workload Password” link
-- [x] Then enter and confirm the password
-- [x] Click “**Set Workload Password”**
-
-
 -----
 ## Lab 1 - Create Database
 *Do all these steps as the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
