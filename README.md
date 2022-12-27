@@ -104,9 +104,8 @@ limit 3;
 ```
 Results
 
-| :- | :- |:- | :- | :- |:- | :- |
-|airports_csv.iata |	airports_csv.airport|	airports_csv.city |	airports_csv.state |	airports_csv.country | airports_csv.lat |
-| :- | :- |:- | :- | :- |:- | :- |
+|airports_csv.iata |airports_csv.airport |airports_csv.city |airports_csv.state |airports_csv.country |airports_csv.lat|
+| :- | :- | :- | :- | :- |:- | :- |
 |00M	|"Thigpen "	|Bay Springs		|USA	|31.95376472	|-89.23450472 |
 |00R	|Livingston Municipal	Livingston		|USA	|30.68586111	|-95.0179277 |
 |00V	|Meadow Lake	|Colorado Springs		|USA	|38.94574889	|-104.5698933 |
