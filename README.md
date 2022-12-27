@@ -103,69 +103,47 @@ DESCRIPTION: Customer Experience Reporting showing airplanes that have the highe
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
 ```sql
-SELECT tailnum  as aircraft_number,
-       count(*) as cnt_delays,
-       avg(nvl(depdelay,0)) AS avg_delay
-FROM flights_csv
-GROUP BY tailnum
-ORDER BY avg_delay DESC;
+SELECT
+  tailnum  as aircraft_number,
+  avg(nvl(depdelay,0)) AS avg_departure_delay,
+  count(*) as cnt_delays
+FROM
+  flights_csv
+GROUP BY
+  tailnum
+ORDER BY
+  avg_delay DESC;
 
 ```
-Note: Runing the first time may take a clouple minutes.
+Note: Runing the first time may take some time.
 
 Results
 
-|aircraft	| avg_delay |	 cnt_delays|
+|aircraft	| avg_departure_delay |	 cnt_delays|
 | :- | :- |:- |
 |N194JB	| 180	| 1	|
 |N906S	| 178	| 1 |
 |N575ML	| 145.5	| 2	|
 |N852NV	| 100	| 13	|
-...
-| :- | :- |:- |
+|N000AA	| 94.678	| 28	|
 
-QUERY: Aircrafts most delays
 
-DESCRIPTION: Ad Hoc Exploration to Investigate - Exploratory query to determine which engine type contributes to the most delayed flights.
 
+QUERY: Find what engines in these airplanes causing the delays
+
+DESCRIPTION: Ad Hoc Exploration
 
 ```sql
-SELECT model,
-       engine_type
-FROM planes_csv
-WHERE planes_csv.tailnum IN
-    (SELECT tailnum
-     FROM
-       (SELECT tailnum,
-               count(*),
-               avg(depdelay) AS avg_delay,
-               max(depdelay),
-               avg(taxiout),
-               avg(cancelled),
-               avg(weatherdelay),
-               max(weatherdelay),
-               avg(nasdelay),
-               max(nasdelay),
-               avg(securitydelay),
-               max(securitydelay),
-               avg(lateaircraftdelay),
-               max(lateaircraftdelay),
-               avg(airtime),
-               avg(actualelapsedtime),
-               avg(distance)
-        FROM flights_csv
-        WHERE tailnum IN ('N194JB',
+SELECT p.model, p.engine_type
+FROM planes_csv p
+where tailnum  IN ('N194JB',
                           'N906S',
                           'N575ML',
                           'N852NW',
-                          'N000AA')
-        GROUP BY tailnum) AS delays);
-
+                          'N000AA');
 ```
-NOTE: If this returns no results, then remove the 'WHERE tailnum in …' clause
 
-Results
-
+Results:
 
 |MODEL	|ENGINE_TYPE|
 | :- | :- |
