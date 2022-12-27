@@ -123,28 +123,29 @@ DESCRIPTION: Customer Experience Reporting showing airplanes that have the highe
 
 ```sql
 SELECT
-  tailnum  as aircraft_number,
-  avg(nvl(depdelay,0)) AS avg_departure_delay,
+  tailnum,
+  sum( nvl(depdelay,0) ) AS departure_delay,
   count(*) as cnt_delays
 FROM
   flights_csv
 GROUP BY
   tailnum
 ORDER BY
- avg_departure_delay DESC;
+  departure_delay DESC
+LIMIT 5;
 
 ```
 Note: Runing the first time may take some time.
 
 Results
 
-|aircraft	| avg_departure_delay |	 cnt_delays|
+|aircraft	| departure_delay |	 cnt_delays|
 | :- | :- | :- |
-|N194JB	| 180	| 1	|
-|N906S	| 178	| 1 |
-|N575ML	| 145.5	| 2	|
-|N852NV	| 100	| 13	|
-|N000AA	| 94.678	| 28	|
+|N381UA	| 341368 | 25287	|
+|N375UA	| 341103	| 25147 |
+|N673	| 333744	| 30616	|
+|N366UA	| 331318	| 24808	|
+|N377UA	| 328546	| 25105	|
 
 
 
@@ -153,21 +154,42 @@ QUERY: Find what engines in these airplanes causing the delays
 DESCRIPTION: Ad Hoc Exploration
 
 ```sql
+with aircrafts_delayed as (
 SELECT
- p.model,
- p.engine_type
+  tailnum ,
+  sum( nvl(depdelay,0)) AS departure_delay,
+  count(*) as cnt_delays
 FROM
- planes_csv p
-WHERE
- tailnum IN ('N194JB', 'N906S', 'N575ML', 'N852NW', 'N000AA');
-
+  flights_csv
+GROUP BY
+  tailnum
+)
+select
+  p.engine_type as engine,
+  p.model as model,
+  sum( a.departure_delay ) as sum_departure_delay
+from
+ planes_csv p,
+ aircrafts_delayed a
+where
+ a.tailnum = p.tailnum
+group by
+ p.engine_type,
+ p.model
+order by sum_departure_delay desc
+limit 5;
 ```
 
 Results:
 
-|MODEL	|ENGINE_TYPE|
-| :- | :- |
-|A330-223	|Turbo-Fan|
+|engine	|model|sum_departure_delay|
+| :- | :- | :- |
+|Turbo-Fan |CL-600-2B19| 30905586|
+| | | 30857153|
+|Turbo-Fan|EMB-145LR|20831992|
+|Turbo-Fan|DC9-82(MD-82)|20075023|
+|Turbo-Fan|MK-88|19482652|
+
 
 -----
 ## Lab 3 - Managed Tables
