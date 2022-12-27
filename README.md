@@ -94,11 +94,11 @@ Results
 |unique_tickets_csv|
 
 
-Run exploratory queries to understand the data. This reads the CSV data, converts it into a columnar in-memory format, and executes the query. \
+Run exploratory queries to understand the data. This reads the CSV data, converts it into a columnar in-memory format, and executes the query.
 
-QUERY: Airline Delay Aggregate Metrics by Airplane. \
+QUERY: Airline Delay Aggregate Metrics by Airplane.
 
-DESCRIPTION: Customer Experience Reporting showing airplanes that have the highest average delays, causing the worst customer experience. \
+DESCRIPTION: Customer Experience Reporting showing airplanes that have the highest average delays, causing the worst customer experience.
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
