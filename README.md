@@ -96,7 +96,7 @@ Results
 Checking that external tables data
 
 ```sql
-SELECT 
+SELECT
   *
 FROM  
   airports_csv
@@ -104,6 +104,7 @@ limit 3;
 ```
 Results
 
+| :- | :- |:- | :- | :- |:- | :- |
 |airports_csv.iata |	airports_csv.airport|	airports_csv.city |	airports_csv.state |	airports_csv.country | airports_csv.lat |
 | :- | :- |:- | :- | :- |:- | :- |
 |00M	|"Thigpen "	|Bay Springs		|USA	|31.95376472	|-89.23450472 |
