@@ -93,6 +93,23 @@ Results
 |planes_csv|
 |unique_tickets_csv|
 
+Checking that external tables data
+
+```sql
+SELECT 
+  *
+FROM  
+  airports_csv
+limit 3;
+```
+Results
+
+|airports_csv.iata |	airports_csv.airport|	airports_csv.city |	airports_csv.state |	airports_csv.country | airports_csv.lat |
+| :- | :- |:- | :- | :- |:- | :- |
+|00M	|"Thigpen "	|Bay Springs		|USA	|31.95376472	|-89.23450472 |
+|00R	|Livingston Municipal	Livingston		|USA	|30.68586111	|-95.0179277 |
+|00V	|Meadow Lake	|Colorado Springs		|USA	|38.94574889	|-104.5698933 |
+
 
 Run exploratory queries to understand the data. This reads the CSV data, converts it into a columnar in-memory format, and executes the query.
 
@@ -112,7 +129,7 @@ FROM
 GROUP BY
   tailnum
 ORDER BY
-  avg_delay DESC;
+ avg_departure_delay DESC;
 
 ```
 Note: Runing the first time may take some time.
@@ -139,7 +156,7 @@ SELECT
  p.engine_type
 FROM
  planes_csv p
-where
+WHERE
  tailnum IN ('N194JB', 'N906S', 'N575ML', 'N852NW', 'N000AA');
 
 ```
@@ -177,7 +194,7 @@ from flights_csv;
 
 ```
 
-This takes a few minutes!
+This takes a few minutes to read and write the data back.
 
 Check that you created managed & external tables
 
@@ -187,7 +204,6 @@ SHOW TABLES;
 ```
 
 Results
-
 
 |TAB_NAME|
 | :- |
@@ -225,15 +241,13 @@ ORDER BY
   num_flights_cancelled DESC;
 ```
 
-Go to Queries page, then click on the query that just ran, then scroll down to DAG INFO,
-choose DAG COUNTERS, then filter for 'cache', then show CACHE_MISS_BYTES and/or CACHE_HIT_BYTES.
-Take note of the query run time too.
 
-Note:  sometimes it takes up to a few minutes for DAS to parse the query metrics and expose them in the UI.
 
 Run query again.
 Check the cache metrics again to see the improved hit rate.
 
+INFO  : Completed executing command(queryId=hive_20221227135653_077cd66e-87f0-4f33-a8e9-eb5e07bfe40f); Time taken: 2.949 seconds
+INFO  : OK
 
 Query to find all international flights: flights where destination airport country is not the same as origin airport country
 
