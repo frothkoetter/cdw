@@ -257,9 +257,10 @@ Result
 |dayofweek| int| |
 ...
 
-Scrole down to row 49
-| :- | :- |:- |
+Scrol down to row 49
+
 | | numFiles| 15 |
+| :- | :- |:- |
 | | numPartitions| 15 |
 | | numRows| 8628933 |
 
