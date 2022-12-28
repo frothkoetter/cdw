@@ -11,7 +11,7 @@ Enitiy-Relation Diagram of tables we use in todays workshop:
 - fact table: flights (86mio rows)
 - dimension tables: airlines (1.5k rows), airports (3.3k rows) and planes (5k rows)
 
-![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.002.png)
+![](images/image001.png)
 
 -----
 ## Lab 1 - Create Database
@@ -249,22 +249,20 @@ Experiment with different queries to see effects of the data in columnar format 
 QUERY: Airline Delay Aggregate Metrics by Airplane on managed table
 
 ```sql
-
 SELECT
-  100/SUM(1)*SUM(flights.cancelled)  AS pct_cancelled,
-  SUM(flights.cancelled) AS sum_cancelled,
-  airlines.description AS airline_name
+  tailnum,
+  sum( nvl(depdelay,0) ) AS departure_delay,
+  count(*) as cnt_delays
 FROM
-  flights_orc flights
-  JOIN airlines_orc airlines ON (flights.uniquecarrier = airlines.code)
+  flights_csv
 GROUP BY
-   airlines.description
+  tailnum
 ORDER BY
-  pct_cancelled DESC
-LIMIT
- 5;
+  departure_delay DESC
+LIMIT 5;
 ```
-Results
+
+Results (same as previous query)
 
 |aircraft	| departure_delay |	 cnt_delays|
 | :- | :- | :- |
@@ -276,14 +274,12 @@ Results
 
 Now let's compare the two queries
 
-In HUE on the left side you click on Jobs
+In HUE on the left side you click on Jobs next is to click on Queries.
 
-
-Run query again.
 Check the cache metrics again to see the improved hit rate.
 
-INFO  : Completed executing command(queryId=hive_20221227135653_077cd66e-87f0-4f33-a8e9-eb5e07bfe40f); Time taken: 2.949 seconds
-INFO  : OK
+![](images/image002.png)
+
 
 Query to find all international flights: flights where destination airport country is not the same as origin airport country
 
@@ -309,7 +305,7 @@ ORDER BY
    dayofmonth ASC;
 ```
 
-Query to explore passenger manifest data:  do we have international connecting flights?
+Query: Explore passenger with international connecting flights?
 
 ```sql
 SELECT * FROM
