@@ -244,27 +244,39 @@ Results
 
 
 
-Experiment with different queries to see effects of the data cache on each executor.
+Experiment with different queries to see effects of the data in columnar format and cache on each executor.
 
-Run query. Highlight both “SET …” and “SELECT …” when you execute.
+QUERY: Airline Delay Aggregate Metrics by Airplane on managed table
 
 ```sql
-SET hive.query.results.cache.enabled=false;
 
 SELECT
-  SUM(flights.cancelled) AS num_flights_cancelled,
-  SUM(1) AS total_num_flights,
-  MIN(airlines.description) AS airline_name,
-  airlines.code AS airline_code
+  100/SUM(1)*SUM(flights.cancelled)  AS pct_cancelled,
+  SUM(flights.cancelled) AS sum_cancelled,
+  airlines.description AS airline_name
 FROM
   flights_orc flights
   JOIN airlines_orc airlines ON (flights.uniquecarrier = airlines.code)
 GROUP BY
-  airlines.code
+   airlines.description
 ORDER BY
-  num_flights_cancelled DESC;
+  pct_cancelled DESC
+LIMIT
+ 5;
 ```
+Results
 
+|aircraft	| departure_delay |	 cnt_delays|
+| :- | :- | :- |
+|N381UA	| 341368 | 25287	|
+|N375UA	| 341103	| 25147 |
+|N673	| 333744	| 30616	|
+|N366UA	| 331318	| 24808	|
+|N377UA	| 328546	| 25105	|
+
+Now let's compare the two queries
+
+In HUE on the left side you click on Jobs
 
 
 Run query again.
