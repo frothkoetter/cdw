@@ -276,10 +276,11 @@ Now let's compare the two queries
 
 In HUE on the left side you click on Jobs next is to click on Queries.
 
-Check the cache metrics again to see the improved hit rate.
+Select two queries and check the box to compare.
 
 ![](images/image002.png)
 
+You find all details of these two queries side-by-side.
 
 Query to find all international flights: flights where destination airport country is not the same as origin airport country
 
