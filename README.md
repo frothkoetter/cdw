@@ -124,28 +124,28 @@ DESCRIPTION: Customer Experience Reporting showing airplanes that have the highe
 ```sql
 SELECT
   tailnum,
-  sum( nvl(depdelay,0) ) AS departure_delay,
-  count(*) as cnt_delays
+  count(*) as flights_count,
+  sum( nvl(depdelay,0) ) AS departure_delay_minutes,
+  sum( case when nvl(depdelay,0) > 0 then 1 end) as departure_delay_count
 FROM
   flights_csv
 GROUP BY
   tailnum
 ORDER BY
-  departure_delay DESC
+ departure_delay_minutes DESC
 LIMIT 5;
-
 ```
-Note: Runing the first time may take some time.
+Note: Running the first time may take some time.
 
 Results
 
-|aircraft	| departure_delay |	 cnt_delays|
-| :- | :- | :- |
-|N381UA	| 341368 | 25287	|
-|N375UA	| 341103	| 25147 |
-|N673	| 333744	| 30616	|
-|N366UA	| 331318	| 24808	|
-|N377UA	| 328546	| 25105	|
+|tailnum	| flights_count | departure_delay_minutes |	 departure_delay_count|
+| :- | :- | :- | :- |
+|N381UA	| 25287 |341368 | 12280	|
+|N375UA	| 25147 |341103	| 12162 |
+|N673	| 30616 |333744	| 12835	|
+|N366UA	| 24808 |331318	| 12113	|
+|N377UA	| 25105 |328546	| 12163	|
 
 
 
@@ -157,8 +157,9 @@ DESCRIPTION: Ad Hoc Exploration
 with aircrafts_delayed as (
 SELECT
   tailnum ,
-  sum( nvl(depdelay,0)) AS departure_delay,
-  count(*) as cnt_delays
+  count(*) as flights_count,
+  sum( nvl(depdelay,0) ) AS departure_delay_minutes,
+  sum( case when nvl(depdelay,0) > 0 then 1 end) as departure_delay_count
 FROM
   flights_csv
 GROUP BY
@@ -167,7 +168,7 @@ GROUP BY
 select
   p.engine_type as engine,
   p.model as model,
-  sum( a.departure_delay ) as sum_departure_delay
+  sum( a.departure_delay_minutes ) as sum_departure_delay_minutes
 from
  planes_csv p,
  aircrafts_delayed a
@@ -176,13 +177,13 @@ where
 group by
  p.engine_type,
  p.model
-order by sum_departure_delay desc
+order by sum_departure_delay_minutes desc
 limit 5;
 ```
 
 Results:
 
-|engine	|model|sum_departure_delay|
+|engine	|model|sum_departure_delay_minutes|
 | :- | :- | :- |
 |Turbo-Fan |CL-600-2B19| 30905586|
 | | | 30857153|
@@ -286,32 +287,32 @@ QUERY: Airline Delay Aggregate Metrics by Airplane on managed table
 ```sql
 SELECT
   tailnum,
-  sum( nvl(depdelay,0) ) AS departure_delay,
-  count(*) as cnt_delays
+  count(*) as flights_count,
+  sum( nvl(depdelay,0) ) AS departure_delay_minutes,
+  sum( case when nvl(depdelay,0) > 0 then 1 end) as departure_delay_count
 FROM
-  flights_csv
+  flights_orc
 GROUP BY
   tailnum
 ORDER BY
-  departure_delay DESC
+ departure_delay_minutes DESC
 LIMIT 5;
 ```
 
 Results (same as previous query)
-
-|aircraft	| departure_delay |	 cnt_delays|
-| :- | :- | :- |
-|N381UA	| 341368 | 25287	|
-|N375UA	| 341103	| 25147 |
-|N673	| 333744	| 30616	|
-|N366UA	| 331318	| 24808	|
-|N377UA	| 328546	| 25105	|
+|tailnum	| flights_count | departure_delay_minutes |	 departure_delay_count|
+| :- | :- | :- | :- |
+|N381UA	| 25287 |341368 | 12280	|
+|N375UA	| 25147 |341103	| 12162 |
+|N673	| 30616 |333744	| 12835	|
+|N366UA	| 24808 |331318	| 12113	|
+|N377UA	| 25105 |328546	| 12163	|
 
 Now let's compare this query select flights_orc managed table with the previous query for the flights_csv external table.
 
-HUE Query Processors can compare the quiereis. You navigate to the Query Processor via on the left side you click on Jobs, next is to click on Queries.
+The Hive Query Processors can compare the queries. You navigate to the Query Processor via on the left side you click on Jobs, next is to click on Queries.
 
-Next is to select the two queries, hoover over the SQL command and look into the FROM clause.
+Next is to select the two queries, hoover over the SQL command and search the FROM clause with flights_csv and flights_orc.
 
 When you found the SQL queries next is to check the box to click compare.
 
@@ -424,7 +425,7 @@ Reminder: use your own “db\_user001”..”db\_user020” database.
 
 Materialized views (MV) cause Hive to transparently rewrite queries, when possible, to use the MV instead of the base tables.
 
-Create Materialized View
+Create Materialized View of a join of two tables with aggregation.
 
 ```sql
 DROP MATERIALIZED VIEW IF EXISTS traffic_cancel_airlines;
@@ -433,19 +434,24 @@ CREATE MATERIALIZED VIEW
  traffic_cancel_airlines
 AS SELECT
  airlines.code AS code,  
- MIN(airlines.description) AS airline_name,
+ airlines.description AS airline_name,
  flights.month AS month,
- sum(flights.cancelled) AS cancelled
+ count(*) as flights_count,
+ SUM(flights.cancelled) AS cancelled,
+ sum( nvl(depdelay,0) ) AS departure_delay_minutes,
+ sum( case when nvl(depdelay,0) > 0 then 1 end) as departure_delay_count
 FROM
  flights_orc flights
  JOIN
   airlines_orc airlines ON (flights.uniquecarrier = airlines.code)
 group by
  airlines.code,
+ airlines.description,
  flights.month;
 ```
+Note: The time to create the MV takes apporox. 3-5 minutes.
 
-Check that the Materialized view is created.
+Test that the Materialized view is created.
 
 ```sql
 SHOW MATERIALIZED VIEWS;
@@ -453,26 +459,28 @@ SHOW MATERIALIZED VIEWS;
 
 Results
 
-|MV_NAME | REWRITE_ENABLED |  MODE  |
-| :- | :- | :- |
-|traffic_cancel_airlines|Yes	| Manual refresh |
+|MV_NAME | REWRITE_ENABLED |  MODE  | incremental_rebuild |
+| :- | :- | :- | :- |
+|traffic_cancel_airlines|Yes	| Manual refresh | Available |
 
-
-Running a dashoboard query
+Running a query for part of the materialized view.
 
 ```sql
-SET hive.query.results.cache.enabled=false;
-
-SELECT airlines.code AS code,  MIN(airlines.description) AS description,
-          sum(flights.cancelled) AS cancelled
-FROM flights_orc flights , airlines_orc airlines
-WHERE flights.uniquecarrier = airlines.code
-group by airlines.code;
+SELECT
+  airlines.description AS description,
+ SUM(flights.cancelled) AS flights_cancelled
+FROM
+ flights_orc flights ,
+ airlines_orc airlines
+WHERE
+ flights.uniquecarrier = airlines.code
+group by
+ airlines.code
 ```
-
 Run the explain and query rewrite should show like:
 
-![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.003.png)
+![](images/image005.png)
+
 
 ------
 ## Lab 5 - Time Travel and Parition Evolution
