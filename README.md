@@ -248,7 +248,7 @@ The DESCRIBE cmd shows detailed information about the table.
  DESCRIBE formatted flights_orc ;
  ```
 
-Result
+Result: column names with types, parameters and storage 
 
 |col_name| data_type| comment|
 | :- | :- |:- |
