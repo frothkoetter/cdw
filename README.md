@@ -307,17 +307,18 @@ Results (same as previous query)
 |N366UA	| 331318	| 24808	|
 |N377UA	| 328546	| 25105	|
 
-Now let's compare the two queries
+Now let's compare this query select flights_orc managed table with the previous query for the flights_csv external table.
 
-In HUE on the left side you click on Jobs next is to click on Queries.
+HUE Query Processors can compare the quiereis. You navigate to the Query Processor via on the left side you click on Jobs, next is to click on Queries.
 
-Select two queries and check the box to compare.
+Next is to select the two queries, hoover over the SQL command and look into the FROM clause.
 
+When you found the SQL queries next is to check the box to click compare.
+
+Here you see the two queries side-by-side with all details.
 ![](images/image002.png)
 
-You find all details of these two queries side-by-side.
-
-Query to find all international flights: flights where destination airport country is not the same as origin airport country
+Query: Find all international flights: flights where destination airport country is not the same as origin airport country
 
 ```sql
 SELECT DISTINCT
