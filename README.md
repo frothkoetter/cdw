@@ -356,7 +356,7 @@ group by
    a.leg1uniquecarrier;
 ```
 
-##3 Defaults - SURROGATE_KEY
+### Defaults - SURROGATE_KEY
 
 Surrogate keys are easy & distributable & fast, but not in sequence, has gaps.
 
@@ -395,7 +395,7 @@ Result:
 
 Note: the first column is the new unique SURROGATE_KEY
 
-##3 OPTIONAL STEP
+### OPTIONAL STEP
 
 RUNNING approx 10 Minutes!
 
