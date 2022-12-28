@@ -242,9 +242,43 @@ Results
 |unique_tickets_csv|
 |unique_tickets_orc|
 
+The DESCRIBE cmd shows detailed information about the table.
+
+ ```sql
+ DESCRIBE formatted flights_orc ;
+ ```
+
+Result
+
+|col_name| data_type| comment|
+| :- | :- |:- |
+|month| int| |
+|dayofmonth| int| |
+|dayofweek| int| |
+...
+
+Scrole down to row 49
+| :- | :- |:- |
+| | numFiles| 15 |
+| | numPartitions| 15 |
+| | numRows| 8628933 |
+
+ ```sql
+show partitions flights_orc
+ ```
+Result: showing all 15 partitions with keys
+
+| partition |
+| :- |
+|year=1995|
+|year=1996|
+|year=1997|
+|...|
+|year=__HIVE_DEFAULT_PARTITION__|
 
 
-Experiment with different queries to see effects of the data in columnar format and cache on each executor.
+
+Experiment with different queries to see effects of the columnar format and cache.
 
 QUERY: Airline Delay Aggregate Metrics by Airplane on managed table
 
@@ -306,37 +340,9 @@ ORDER BY
    dayofmonth ASC;
 ```
 
-Query: Explore passenger with international connecting flights?
+Query: Number of passengers on the airline that has long, planned layovers for an international
+flight.
 
-```sql
-SELECT * FROM
-  unique_tickets_orc a,
-  flights_orc o,
-  flights_orc d,
-  airports_orc oa,
-  airports_orc da  
-WHERE
-   a.leg1flightnum = o.flightnum
-   AND a.leg1uniquecarrier = o.uniquecarrier
-   AND a.leg1origin = o.origin
-   AND a.leg1dest = o.dest
-   AND a.leg1month = o.month
-   AND a.leg1dayofmonth = o.dayofmonth
-   AND a.leg1dayofweek = o.`dayofweek`
-   AND a.leg2flightnum = d.flightnum
-   AND a.leg2uniquecarrier = d.uniquecarrier
-   AND a.leg2origin = d.origin
-   AND a.leg2dest = d.dest
-   AND a.leg2month = d.month
-   AND a.leg2dayofmonth = d.dayofmonth
-   AND a.leg2dayofweek = d.`dayofweek`
-   AND d.origin = oa.iata
-   AND d.dest = da.iata
-   AND oa.country <> da.country ;
-```
-
-Number of passengers on the airline that has long, planned layovers for an international
-flight
 ```sql
 SELECT
    a.leg1uniquecarrier as carrier,
@@ -349,6 +355,63 @@ group by
    a.leg1uniquecarrier;
 ```
 
+Using SURROGATE_KEY for your dimension tables.
+
+```sql
+DROP TABLE IF EXISTS airlines_with_surrogate_key;
+
+CREATE TABLE
+  airlines_with_surrogate_key (
+    ID BIGINT DEFAULT SURROGATE_KEY(),
+    CODE STRING,
+    DESCRIPTION STRING);
+
+INSERT INTO airlines_with_surrogate_key (CODE, DESCRIPTION)
+SELECT
+  code,
+  description
+FROM
+  airlines_orc;
+
+SELECT
+ *
+FROM  
+ airlines_with_surrogate_key
+ORDER BY
+ id
+LIMIT 3;
+```
+
+Result:
+
+|id	| code |	 description|
+| :- | :- | :- |
+|1099511627776 |02Q |Titan Airways |
+|1099511627777 |04Q |Tradewind Aviation |
+|1099511627778 |05Q |"Comlux Aviation |
+
+Note: the first column is the new unique SURROGATE_KEY
+
+NEXT STEP IS OPTIONAL RUNNING approx 10 Minutes!
+
+Adding a new column to the flights_orc table and update with the new unique SURROGATE_KEY.
+
+```sql
+ALTER TABLE FLIGHTS_ORC ADD COLUMNS (carrier_sk BIGINT);
+
+MERGE INTO
+ flights_orc f
+USING
+  airlines_with_surrogate_key a
+  ON
+  f.uniquecarrier = a.code
+WHEN
+ MATCHED THEN
+   UPDATE SET carrier_sk = a.id;
+```
+
+Note: MERGE is a compute and IO intensive ACID operation.
+
 
 -----
 ## Lab 4 - Materialized View
@@ -360,16 +423,25 @@ Create materialized view (MV). This will cause Hive to transparently rewrite que
 Create Materialized View
 ```sql
 DROP MATERIALIZED VIEW IF EXISTS traffic_cancel_airlines;
-CREATE MATERIALIZED VIEW traffic_cancel_airlines
-as SELECT airlines.code AS code,  MIN(airlines.description) AS description,
-          flights.month AS month,
-          sum(flights.cancelled) AS cancelled
-FROM flights_orc flights JOIN airlines_orc airlines ON (flights.uniquecarrier = airlines.code)
-group by airlines.code, flights.month;
+
+CREATE MATERIALIZED VIEW
+ traffic_cancel_airlines
+AS SELECT
+ airlines.code AS code,  
+ MIN(airlines.description) AS airline_name,
+ flights.month AS month,
+ sum(flights.cancelled) AS cancelled
+FROM
+ flights_orc flights
+ JOIN
+  airlines_orc airlines ON (flights.uniquecarrier = airlines.code)
+group by
+ airlines.code,
+ flights.month;
 ```
 
 Check that the Materialized view is created.
-Replace ** in DB_USER0**
+
 ```sql
 SHOW MATERIALIZED VIEWS;
 ```
