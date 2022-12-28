@@ -248,7 +248,7 @@ The DESCRIBE cmd shows detailed information about the table.
  DESCRIBE formatted flights_orc ;
  ```
 
-Result: column names with types, parameters and storage 
+Result: column names with types, parameters and storage
 
 |col_name| data_type| comment|
 | :- | :- |:- |
@@ -356,7 +356,9 @@ group by
    a.leg1uniquecarrier;
 ```
 
-Using SURROGATE_KEY for your dimension tables.
+##3 Defaults - SURROGATE_KEY
+
+Surrogate keys are easy & distributable & fast, but not in sequence, has gaps.
 
 ```sql
 DROP TABLE IF EXISTS airlines_with_surrogate_key;
@@ -393,35 +395,36 @@ Result:
 
 Note: the first column is the new unique SURROGATE_KEY
 
-NEXT STEP IS OPTIONAL RUNNING approx 10 Minutes!
+##3 OPTIONAL STEP
+
+RUNNING approx 10 Minutes!
 
 Adding a new column to the flights_orc table and update with the new unique SURROGATE_KEY.
 
 ```sql
-ALTER TABLE FLIGHTS_ORC ADD COLUMNS (carrier_sk BIGINT);
+ALTER TABLE FLIGHTS_ORC ADD COLUMNS (airlines_id BIGINT);
 
 MERGE INTO
  flights_orc f
 USING
-  airlines_with_surrogate_key a
-  ON
-  f.uniquecarrier = a.code
-WHEN
- MATCHED THEN
-   UPDATE SET carrier_sk = a.id;
+ airlines_with_surrogate_key  a
+ON
+ f.uniquecarrier = a.code
+WHEN MATCHED
+ THEN UPDATE SET airlines_id = a.id;
 ```
 
-Note: MERGE is a compute and IO intensive ACID operation.
+Note: MERGE is a compute and storage i/o intensive operation.
 
 
 -----
 ## Lab 4 - Materialized View
+Reminder: use your own “db\_user001”..”db\_user020” database.
 
-*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
-
-Create materialized view (MV). This will cause Hive to transparently rewrite queries, when possible, to use the MV instead of the base tables.
+Materialized views (MV) cause Hive to transparently rewrite queries, when possible, to use the MV instead of the base tables.
 
 Create Materialized View
+
 ```sql
 DROP MATERIALIZED VIEW IF EXISTS traffic_cancel_airlines;
 
