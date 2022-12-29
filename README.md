@@ -472,9 +472,7 @@ Result:
 
 Note: the first column is the new unique SURROGATE_KEY
 
-### Optional Step
-
-Create a SEQUENCE 
+### Optional Step - Create a SEQUENCE
 
 ```sql
 CREATE TABLE AIRLINES_with_SEQ (
@@ -495,7 +493,7 @@ select
  *
 from
  AIRLINES_with_SEQ
-limit 10;
+limit 3;
 ```
 
 Result:
@@ -505,8 +503,6 @@ Result:
 |1 |02Q |Titan Airways |
 |2 |04Q |Tradewind Aviation |
 |3 |05Q |"Comlux Aviation |
-
-
 
 -----
 ## Lab 5 - Materialized View
@@ -525,10 +521,10 @@ AS SELECT
  airlines.code AS code,  
  airlines.description AS airline_name,
  flights.month AS month,
- count(*) as flights_count,
+ COUNT(*) as flights_count,
  SUM(flights.cancelled) AS cancelled,
- sum( nvl(depdelay,0) ) AS departure_delay_minutes,
- sum( case when nvl(depdelay,0) > 0 then 1 end) as departure_delay_count
+ SUM( nvl(depdelay,0) ) AS departure_delay_minutes,
+ SUM( case when nvl(depdelay,0) > 0 then 1 end) as departure_delay_count
 FROM
  flights_orc flights
  JOIN
