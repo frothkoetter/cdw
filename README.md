@@ -192,28 +192,38 @@ Go to Importer and click .. at the end of the Path field
 
 Type s3a:// in the address text box and press enter.
 
-The S3 buckets associated with the CDW environment are displayed. You can narrow down the list of results using the search option.
+The S3 buckets associated with the CDW environment are displayed.
 
-cdw-vHoL
+You can narrow down the list of results using the search option.
 
-Add a user directory “db\_user001”..”db\_user020”
+Enter: cdw-vhol
 
-Navigate to  passengertickets.csv file the in which you want to upload the file and click Upload a file.
+![](images/image0012.png)
 
-Select the CSV file that you want to import into Hue.
+Add a user directory, same as your database i.e. “db\_user001”..”db\_user020”
+
+![](images/image0013.png)
+
+Click on Upload a file
+
+Navigate on your computer to the downloaded passengertickets.csv file and the file is uploaded into the S3 bucket.
+
+Select the CSV file that you want to import.
+
 Hue displays the preview of the table along with the format.
 Hue automatically detects the field separator, record separator, and the quote character from the CSV file. If you want to override a specific setting, select a different value from the drop-down list.
+
+![](images/image0015.png)
 
 Click Next.
 
 On this page under DESTINATION, enter “db\_user001”..”db\_user020".unique_tickets_csv in the Name field.
-The unique_tickets_csv table is created database.
 
 Expand Extras and select the Store in Default location option.
 
-click Submit.
+Click Submit.
 
-The CREATE TABLE query is triggered.
+The CREATE TABLE query is triggered and the table unique_tickets_csv is created in your database.
 
 Hue displays the logs and opens the Table Browser from which you can view the newly created table when the operation completes successfully.
 
