@@ -210,6 +210,8 @@ Navigate on your computer to the downloaded passengertickets.csv file and the fi
 
 Select the CSV file that you want to import.
 
+![](images/image0014.png)
+
 Hue displays the preview of the table along with the format.
 Hue automatically detects the field separator, record separator, and the quote character from the CSV file. If you want to override a specific setting, select a different value from the drop-down list.
 
