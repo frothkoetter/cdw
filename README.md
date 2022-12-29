@@ -474,9 +474,7 @@ Note: the first column is the new unique SURROGATE_KEY
 
 ### Optional Step
 
-RUNNING approx 10 Minutes!
-
-Adding a new column to the flights_orc table and update with the new unique SURROGATE_KEY.
+Create a SEQUENCE 
 
 ```sql
 CREATE TABLE AIRLINES_with_SEQ (
