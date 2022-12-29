@@ -470,7 +470,7 @@ Result:
 
 Note: the first column is the new unique SURROGATE_KEY
 
-### Lab 4 - OPTIONAL STEP
+### Optional Step
 
 RUNNING approx 10 Minutes!
 
@@ -560,7 +560,7 @@ Run the explain and query rewrite should show like:
 
 Cloudera Iceberg is a high-performance format for huge analytic tables for engines like Spark, Impala Flink and Hive to safely work with the same tables, at the same time.
 
-Creatint a partitioned table with CREATE TABLE ... PARTITIONED BY & STORED BY ICEBERY syntax enables you to create identity-partitioned Iceberg tables. Identity-partitioned Iceberg tables are similar to the regular partitioned tables and are stored in the same directory structure as the regular partitioned tables.
+Creating a partitioned table with CREATE TABLE ... PARTITIONED BY & STORED BY ICEBERG syntax enables you to create identity-partitioned Iceberg tables. Identity-partitioned Iceberg tables are similar to the regular partitioned tables and are stored in the same directory structure as the regular partitioned tables.
 
 Lets create a new table with Iceberg format and insert rows in batches:
 
@@ -590,20 +590,21 @@ from flights_orc where year not in (1995);
 No we all rows with three inserts in the table, and can show the snapshots.
 
 First check the rows in the table.
-Note* - currently we must disable the vectorized execution in Hive
 
 ```sql
-set hive.vectorized.execution.enabled = false;
-select count(*) from flights_ice;
+select
+ count(*)
+from
+ flights_ice;
 ```
 
-Result should be are all 86 mil rows.
+Result are all 86 mil rows.
 
 | _c0 |
 | :- |
 | 86289323 |
 
-Now you can check the table histroy, change the database name and run the command:
+Now you can check the table history, change the database name and run the command:
 ```sql
 select * from DB_userXXX.flights_ice.history;
 ```
@@ -619,10 +620,17 @@ You should see two snapshots of the table in the output, one for each insert.
 You now can time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME - pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace the XXXXXXXXXXXXXXX
 
 ```sql
-set hive.vectorized.execution.enabled = false;
-select year,count(*) from flights_ice
-FOR SYSTEM_VERSION AS OF XXXXXXXXXXXXXXX
-group by year order by year;
+select
+ year,
+ count(*)
+from
+ flights_ice
+FOR
+ SYSTEM_VERSION AS OF XXXXXXXXXXXXXXX
+group by
+ year
+order by
+ year;
 ```
 Now we see the query returns subset of data from the first insert.
 | _c0 |
@@ -648,7 +656,7 @@ origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, 
 nasdelay, securitydelay, lateaircraftdelay, 2022
 from flights_orc where year = 1995;
 ```
-Now lets see the impact what the differnece is, lets run two queries and note the complete time:
+Now lets see the impact what the difference is, lets run two queries and note the complete time:
 
 Count the records for one year and month:
 ```sql
@@ -667,13 +675,13 @@ select year, month, count(1) from flights_ice where  year = 2022 and month = 1 g
 
 INFO  : Completed executing command(queryId=hive_20220427111723_1f126db0-84aa-4df6-b0a1-065a4f9001e4); Time taken: 0.466 seconds
 
-The second query has read only the month of the parition year=2022 and month=1.
+The second query has read only the month of the partition year=2022 and month=1.
 
-This expample shows that the execution time is greatly decreased because less data was read.
+This example shows that the execution time is greatly decreased because less data was read.
 
 
 ------
-## Lab 6 - Slowly Changing Dimensions (SCD) - TYPE 2
+## Lab 7 - Slowly Changing Dimensions (SCD) - TYPE 2
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
@@ -692,7 +700,7 @@ create table airlines_scd(code string, description string, valid_from date, vali
 
 insert into airlines_scd
   select *, cast('2021-01-01' as date), cast(null as date)
-  from airlines_csv limit 1000;
+  from airlines_csv;
 ```
 
 Create an external staging table pointing to our complete airlines dataset (1491 records) and update a description to mockup a change in the dimension
@@ -702,8 +710,11 @@ drop table if exists airlines_stage;
 
 create table airlines_stage as select * from airlines_csv;
 
-update airlines_stage set description =concat('Update - ',upper(description))
-  where code in ('02Q','04Q');
+update airlines_stage
+set
+ description = concat('Update - ',upper(description))
+where
+ code in ('02Q','04Q');
 ```
 
 Perform the SCD type 2 Merge Command
@@ -737,11 +748,18 @@ when not matched
 View the changed records and see that the VALID_FROM and VALID_TO dates are set
 
 ```sql
-select * from airlines_scd where code in ('02Q','04Q') order by code, valid_from;
+select
+ *
+from
+ airlines_scd
+where
+ code in ('02Q','04Q')
+order by
+ code,
+ valid_from;
 ```
 
 Results
-
 
 |CODE|DESCRIPTION|VALID\_FROM|VALID\_TO|
 | :- | :- | :- | :- |
@@ -753,7 +771,7 @@ Results
 
 
 -----
-## Lab 7 - Data Security & Governance
+## Lab 8 - Data Security & Governance
 
 The combination of the Data Warehouse with SDX offers a list of powerful features like rule-based masking columns based on a user’s role and/or group association or rule-based row filters.
 
@@ -858,7 +876,7 @@ In the Ranger UI, select the “Audit” menu and limit the amount of data displ
 
 
 -----
-## Lab 8 - Data Visualization
+## Lab 9 - Data Visualization
 
 
 1. Use Data Visualization to further explore the data set.
