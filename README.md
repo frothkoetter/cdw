@@ -718,10 +718,10 @@ Create the Hive managed table for airlines. Load initial by copy 1000 rows of cu
 ```sql
 drop table if exists airlines_scd;
 
-create table airlines_scd(code string, description string, valid_from date, valid_to date);
+create table airlines_scd(code string, description string, updated_at date, valid_from date, valid_to date);
 
 insert into airlines_scd
-  select *, cast('2021-01-01' as date), cast(null as date)
+  select *, current_date(), cast('2021-01-01' as date), cast(null as date)
   from airlines_csv;
 ```
 
@@ -762,9 +762,9 @@ using (
 on sub.join_key = airlines_scd.code
 when matched
  and sub.description <> airlines_scd.description
- then update set valid_to = current_date()
+ then update set valid_to = current_date(), updated_at = current_date()
 when not matched
- then insert values (sub.code, sub.description, current_date(), null);
+ then insert values (sub.code, sub.description, current_date(), current_date(), null);
 ```
 
 View the changed records and see that the VALID_FROM and VALID_TO dates are set
@@ -783,13 +783,12 @@ order by
 
 Results
 
-|CODE|DESCRIPTION|VALID\_FROM|VALID\_TO|
-| :- | :- | :- | :- |
-|02Q|Titan Airways|2021-01-01|2021-05-26|
-|02Q|Update - TITAN AIRWAYS|2021-05-26|null|
-|04Q|Tradewind Aviation|2021-01-01|2021-05-26|
-|04Q|Update - TRADEWIND AVIATION|2021-05-26|null|
-
+|CODE|DESCRIPTION|UPDATAED\_AT|VALID\_FROM|VALID\_TO|
+| :- | :- | :- | :- | :- |
+|02Q|Titan Airways|2022-12-26|2021-01-01|2022-12-26|
+|02Q|Update - TITAN AIRWAYS|2022-12-26|2021-05-26|null|
+|04Q|Tradewind Aviation|2022-12-26|2021-01-01|2022-12-26|
+|04Q|Update - TRADEWIND AVIATION|2022-12-26|2021-12-26|null|
 
 
 -----
