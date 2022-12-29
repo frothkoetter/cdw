@@ -15,7 +15,6 @@ Enitiy-Relation Diagram of tables we use in todays workshop:
 
 -----
 ## Lab 1 - Create Database
-*Do all these steps as the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
 Navigate to Data Warehouse, then Virtual Warehouse and open the SQL Authoring tool DAS or HUE.
 
@@ -24,8 +23,8 @@ Create new database for your user to be used, or use one that is already created
 ```sql
 -- Change *** of database name
 CREATE DATABASE DB_USER0**;
-USE DB_USER0**;
 
+USE DB_USER0**;
 ```
 Your can check your current database
 ```sql
@@ -201,7 +200,7 @@ Enter: cdw-vhol
 
 ![](images/image0012.png)
 
-Add a user directory, same as your database i.e. “db\_user001”..”db\_user020”
+Click on Create folder and use the same as your database i.e. “db\_user001”
 
 ![](images/image0013.png)
 
@@ -209,18 +208,18 @@ Click on Upload a file
 
 Navigate on your computer to the downloaded passengertickets.csv file and the file is uploaded into the S3 bucket.
 
-Select the CSV file that you want to import.
+Select the file passengertickets.csv to import.
 
 ![](images/image0014.png)
 
-Hue displays the preview of the table along with the format.
+HUE displays the preview of the table along with the format.
 Hue automatically detects the field separator, record separator, and the quote character from the CSV file. If you want to override a specific setting, select a different value from the drop-down list.
 
 ![](images/image0015.png)
 
 Click Next.
 
-On this page under DESTINATION, enter “db\_user001”..”db\_user020".unique_tickets_csv in the Name field.
+On this page under DESTINATION, enter your database_name.unique_tickets_csv i.e “db\_user001”.unique_tickets_csv in the Name field.
 
 ![](images/image0016.png)
 
@@ -232,9 +231,11 @@ The CREATE TABLE query is triggered and the table unique_tickets_csv is created 
 
 ![](images/image0017.png)
 
-Hue displays the logs and opens the Table Browser from which you can view the newly created table when the operation completes successfully.
+HUE displays the logs and opens the Table Browser from which you can view the newly created table when the operation completes successfully.
 
 ![](images/image0018.png)
+
+Then imported the file the table is ready to query.
 
 Query: Number of passengers on the airline that has long, planned layovers for an international
 flight
