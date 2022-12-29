@@ -184,9 +184,38 @@ Results:
 ## Importing Data
 Import the passenger data into CDW from your computer as follows:
 
+Download the file to your computer : https://docs.cloudera.com/cdp-public-cloud-patterns/cloud/passengertickets.csv
+
 Go to Importer and click .. at the end of the Path field
 
 ![](images/image0011.png)
+
+Type s3a:// in the address text box and press enter.
+
+The S3 buckets associated with the CDW environment are displayed. You can narrow down the list of results using the search option.
+
+cdw-vHoL
+
+Add a user directory “db\_user001”..”db\_user020”
+
+Navigate to  passengertickets.csv file the in which you want to upload the file and click Upload a file.
+
+Select the CSV file that you want to import into Hue.
+Hue displays the preview of the table along with the format.
+Hue automatically detects the field separator, record separator, and the quote character from the CSV file. If you want to override a specific setting, select a different value from the drop-down list.
+
+Click Next.
+
+On this page under DESTINATION, enter “db\_user001”..”db\_user020".unique_tickets_csv in the Name field.
+The unique_tickets_csv table is created database.
+
+Expand Extras and select the Store in Default location option.
+
+click Submit.
+
+The CREATE TABLE query is triggered.
+
+Hue displays the logs and opens the Table Browser from which you can view the newly created table when the operation completes successfully.
 
 
 Query: Number of passengers on the airline that has long, planned layovers for an international
