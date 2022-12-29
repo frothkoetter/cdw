@@ -181,7 +181,7 @@ Results:
 |Turbo-Fan|DC9-82(MD-82)|20075023|
 |Turbo-Fan|MK-88|19482652|
 
-## Importing Data
+## Lab 3 - HUE Importing Data
 Import the passenger data into CDW from your computer as follows:
 
 Download the file to your computer : https://docs.cloudera.com/cdp-public-cloud-patterns/cloud/passengertickets.csv
@@ -251,7 +251,7 @@ group by
 ```
 
 -----
-## Lab 3 - Managed Tables
+## Lab 4 - Managed Tables
 
 Run “CREATE TABLE AS SELECT” queries to create full ACID ORC type of the tables. This creates curated versions of the data which are optimal for BI usage.
 
@@ -470,7 +470,7 @@ Result:
 
 Note: the first column is the new unique SURROGATE_KEY
 
-### OPTIONAL STEP
+### Lab 4 - OPTIONAL STEP
 
 RUNNING approx 10 Minutes!
 
@@ -493,7 +493,7 @@ Note: MERGE is a compute and storage i/o intensive operation.
 
 
 -----
-## Lab 4 - Materialized View
+## Lab 5 - Materialized View
 Reminder: use your own “db\_user001”..”db\_user020” database.
 
 Materialized views (MV) cause Hive to transparently rewrite queries, when possible, to use the MV instead of the base tables.
@@ -556,7 +556,7 @@ Run the explain and query rewrite should show like:
 
 
 ------
-## Lab 5 - Time Travel and Parition Evolution
+## Lab 6 - Time Travel and Parition Evolution
 
 Cloudera Iceberg is a high-performance format for huge analytic tables for engines like Spark, Impala Flink and Hive to safely work with the same tables, at the same time.
 
