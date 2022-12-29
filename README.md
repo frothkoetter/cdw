@@ -221,14 +221,19 @@ Click Next.
 
 On this page under DESTINATION, enter “db\_user001”..”db\_user020".unique_tickets_csv in the Name field.
 
+![](images/image0016.png)
+
 Expand Extras and select the Store in Default location option.
 
 Click Submit.
 
 The CREATE TABLE query is triggered and the table unique_tickets_csv is created in your database.
 
+![](images/image0017.png)
+
 Hue displays the logs and opens the Table Browser from which you can view the newly created table when the operation completes successfully.
 
+![](images/image0018.png)
 
 Query: Number of passengers on the airline that has long, planned layovers for an international
 flight
