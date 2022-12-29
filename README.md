@@ -63,15 +63,6 @@ CREATE EXTERNAL TABLE airports_csv(iata string, airport string, city string, sta
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
 STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.header.line.count"="1");
 
-drop table if exists unique_tickets_csv;
-CREATE external TABLE unique_tickets_csv (ticketnumber BIGINT, leg1flightnum BIGINT, leg1uniquecarrier STRING, leg1origin STRING,   leg1dest STRING, leg1month BIGINT, leg1dayofmonth BIGINT,   
- leg1dayofweek BIGINT, leg1deptime BIGINT, leg1arrtime BIGINT,   
- leg2flightnum BIGINT, leg2uniquecarrier STRING, leg2origin STRING,   
- leg2dest STRING, leg2month BIGINT, leg2dayofmonth BIGINT,   leg2dayofweek BIGINT, leg2deptime BIGINT, leg2arrtime BIGINT )
-ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
-STORED AS TEXTFILE LOCATION '/airlinedata-csv/unique_tickets'
-tblproperties("skip.header.line.count"="1");
-
 ```
 
 
@@ -91,7 +82,6 @@ Results
 |airports_csv|
 |flights_csv|
 |planes_csv|
-|unique_tickets_csv|
 
 Query external tables to see few samples pointing to the right files
 
@@ -191,6 +181,28 @@ Results:
 |Turbo-Fan|DC9-82(MD-82)|20075023|
 |Turbo-Fan|MK-88|19482652|
 
+## Importing Data
+Import the passenger data into CDW from your computer as follows:
+
+Go to Importer and click .. at the end of the Path field
+
+![](images/image0011.png)
+
+
+Query: Number of passengers on the airline that has long, planned layovers for an international
+flight
+
+```sql
+SELECT
+   a.leg1uniquecarrier as carrier,
+   count(a.leg1uniquecarrier) as passengers
+FROM
+   unique_tickets_csv a
+where
+   a.leg2deptime - a.leg1arrtime>90
+group by
+   a.leg1uniquecarrier;
+```
 
 -----
 ## Lab 3 - Managed Tables
@@ -278,8 +290,6 @@ Result: showing all 15 partitions with keys
 |...|
 |year=__HIVE_DEFAULT_PARTITION__|
 
-
-
 Experiment with different queries to see effects of the columnar format and cache.
 
 QUERY: Airline Delay Aggregate Metrics by Airplane on managed table
@@ -343,20 +353,37 @@ ORDER BY
    dayofmonth ASC;
 ```
 
-Query: Number of passengers on the airline that has long, planned layovers for an international
-flight.
+Query: Explore passenger manifest data: do we have international connecting flights?
 
-```sql
+```SQL
 SELECT
-   a.leg1uniquecarrier as carrier,
-   count(a.leg1uniquecarrier) as passengers
+ *
 FROM
-   unique_tickets_orc a
-where
-   a.leg2deptime - a.leg1arrtime>90
-group by
-   a.leg1uniquecarrier;
-```
+  unique_tickets_orc a,
+  flights_orc o,
+  flights_orc d,
+  airports_orc oa,
+  airports_orc da  
+WHERE
+   a.leg1flightnum = o.flightnum
+   AND a.leg1uniquecarrier = o.uniquecarrier
+   AND a.leg1origin = o.origin
+   AND a.leg1dest = o.dest
+   AND a.leg1month = o.month
+   AND a.leg1dayofmonth = o.dayofmonth
+   AND a.leg1dayofweek = o.`dayofweek`
+   AND a.leg2flightnum = d.flightnum
+   AND a.leg2uniquecarrier = d.uniquecarrier
+   AND a.leg2origin = d.origin
+   AND a.leg2dest = d.dest
+   AND a.leg2month = d.month
+   AND a.leg2dayofmonth = d.dayofmonth
+   AND a.leg2dayofweek = d.`dayofweek`
+   AND d.origin = oa.iata
+   AND d.dest = da.iata
+   AND oa.country <> da.country ;
+  ```
+
 
 ### Defaults - SURROGATE_KEY
 
