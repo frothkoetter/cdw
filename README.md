@@ -338,7 +338,7 @@ Result: showing all 15 partitions with keys
 |...|
 |year=__HIVE_DEFAULT_PARTITION__|
 
-Experiment with different queries to see effects of the columnar format and cache.
+Experiment with different queries to see effects of the columnar storage format and cache.
 
 QUERY: Airline Delay Aggregate Metrics by Airplane on managed table
 
@@ -433,7 +433,7 @@ WHERE
   ```
 
 
-### Defaults - SURROGATE_KEY
+### Defaults - SURROGATE_KEY & SEQUENCE
 
 Surrogate keys are easy & distributable & fast, but not in sequence, has gaps.
 
@@ -479,19 +479,35 @@ RUNNING approx 10 Minutes!
 Adding a new column to the flights_orc table and update with the new unique SURROGATE_KEY.
 
 ```sql
-ALTER TABLE FLIGHTS_ORC ADD COLUMNS (airlines_id BIGINT);
+CREATE TABLE AIRLINES_with_SEQ (
+ ID BIGINT,
+ CODE STRING,
+ DESCRIPTION STRING);
 
-MERGE INTO
- flights_orc f
-USING
- airlines_with_surrogate_key  a
-ON
- f.uniquecarrier = a.code
-WHEN MATCHED
- THEN UPDATE SET airlines_id = a.id;
+INSERT INTO AIRLINES_with_SEQ (
+  ID, CODE, DESCRIPTION)
+ SELECT
+  row_number() over(),
+  CODE,
+  DESCRIPTION
+ from
+  AIRLINES_CSV;
+
+select
+ *
+from
+ AIRLINES_with_SEQ
+limit 10;
 ```
 
-Note: MERGE is a compute and storage i/o intensive operation.
+Result:
+
+|id	| code |	 description|
+| :- | :- | :- |
+|1 |02Q |Titan Airways |
+|2 |04Q |Tradewind Aviation |
+|3 |05Q |"Comlux Aviation |
+
 
 
 -----
@@ -526,7 +542,7 @@ group by
 ```
 Note: The time to create the MV takes apporox. 3-5 minutes.
 
-Test that the Materialized view is created.
+Checking that the materialized view is created.
 
 ```sql
 SHOW MATERIALIZED VIEWS;
@@ -542,7 +558,7 @@ Running a query for part of the materialized view.
 
 ```sql
 SELECT
-  airlines.description AS description,
+ airlines.description AS description,
  SUM(flights.cancelled) AS flights_cancelled
 FROM
  flights_orc flights ,
@@ -552,7 +568,8 @@ WHERE
 group by
  airlines.code
 ```
-Run the explain and query rewrite should show like:
+
+Navigate to the query processor, select the above query and the visual explain you see query rewrite:
 
 ![](images/image005.png)
 
@@ -569,16 +586,19 @@ Lets create a new table with Iceberg format and insert rows in batches:
 ```sql
 drop table if exists flights_ice;
 
-create table flights_ice(month int, dayofmonth int,  
+create table flights_ice(
+ month int, dayofmonth int,  
  dayofweek int, deptime int, crsdeptime int, arrtime int,  
  crsarrtime int, uniquecarrier string, flightnum int, tailnum string,  
  actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int,  
  depdelay int, origin string, dest string, distance int, taxiin int,  
  taxiout int, cancelled int, cancellationcode string, diverted string,  
  carrierdelay int, weatherdelay int, nasdelay int, securitydelay int,  
-lateaircraftdelay int)  
-partitioned by (year int)  
-stored by ICEBERG;
+ lateaircraftdelay int)  
+partitioned by
+ (year int)  
+stored by
+ ICEBERG;
 
 insert into flights_ice  
 select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year  
@@ -589,9 +609,9 @@ select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, u
 from flights_orc where year not in (1995);
 ```
 
-No we all rows with three inserts in the table, and can show the snapshots.
+Now all rows inserted into the table flights_ice.
 
-First check the rows in the table.
+Check the count of rows
 
 ```sql
 select
@@ -600,18 +620,20 @@ from
  flights_ice;
 ```
 
-Result are all 86 mil rows.
+Result: 86 mil rows.
 
 | _c0 |
 | :- |
 | 86289323 |
 
-Now you can check the table history, change the database name and run the command:
+Now select the snapshot history of the table.
+
+*** Change the database name “db\_user001”
 ```sql
 select * from DB_userXXX.flights_ice.history;
 ```
 
-You should see two snapshots of the table in the output, one for each insert.
+Result: two snapshots of the table in the output, one for each insert command.
 
 |FLIGHTS.MADE_CURRENT_AT |	FLIGHTS_ICE.SNAPSHOT_ID	|FLIGHTS.PARENT_ID	|FLIGHTS.IS_CURRENT_ANCESTOR|
 | :- | :- | :- | :- |
@@ -619,7 +641,9 @@ You should see two snapshots of the table in the output, one for each insert.
 2022-05-01 09:56:21.464 Z|	5696129515471947086 | 7097750832501567062 | true |
 
 
-You now can time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME - pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace the XXXXXXXXXXXXXXX
+Let's make a quick time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME.
+
+Pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace ***SNAPSHOT_ID***
 
 ```sql
 select
@@ -628,13 +652,15 @@ select
 from
  flights_ice
 FOR
- SYSTEM_VERSION AS OF XXXXXXXXXXXXXXX
+ SYSTEM_VERSION AS OF ***SNAPSHOT_ID***
 group by
  year
 order by
  year;
 ```
-Now we see the query returns subset of data from the first insert.
+
+Result: Only data from the first insert.
+
 | _c0 |
 | :- |
 | 5327435 |
