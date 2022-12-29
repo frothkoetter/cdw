@@ -181,7 +181,8 @@ Results:
 |Turbo-Fan|DC9-82(MD-82)|20075023|
 |Turbo-Fan|MK-88|19482652|
 
-## Lab 3 - HUE Importing Data
+## Lab 3 - Importing Data with HUE
+
 Import the passenger data into CDW from your computer as follows:
 
 Download the file to your computer : https://docs.cloudera.com/cdp-public-cloud-patterns/cloud/passengertickets.csv
@@ -556,7 +557,7 @@ Run the explain and query rewrite should show like:
 
 
 ------
-## Lab 6 - Time Travel and Parition Evolution
+## Lab 6 - Time Travel and Partition Evolution
 
 Cloudera Iceberg is a high-performance format for huge analytic tables for engines like Spark, Impala Flink and Hive to safely work with the same tables, at the same time.
 
