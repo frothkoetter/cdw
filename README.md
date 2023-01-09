@@ -16,7 +16,7 @@ Enitiy-Relation Diagram of tables we use in todays workshop:
 -----
 ## Lab 1 - Create Database
 
-Navigate to Data Warehouse, then Virtual Warehouse and open the SQL Authoring tool DAS or HUE.
+Navigate to Data Warehouse, then Virtual Warehouse and open the HUE SQL Authoring tool.
 
 Create new database for your user to be used, or use one that is already created for you.
 
@@ -886,7 +886,7 @@ We can actually check this easily by using the lineage graph to navigate to a do
 
 This will give us the metadata for the “age” column in a derived table. Note the information on “Propagated Classifications”:
    ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.013.png)
-Try to query all columns from the “emp\_all” table again in DAS – by simply executing the last query again.
+Try to query all columns from the “emp\_all” table again in HUE – by simply executing the last query again.
 Why did we get an error now? There exists a policy in Ranger that denies all members of the hands-on lab group access to Hive data that is classified as “PII”. Let’s check that out. Like before for Atlas, open the Ranger UI via the triple-dot menu in you warehouse’s Database Catalog: ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.014.png)
 
 In the Ranger UI, select the “Audit” menu and limit the amount of data displayed by specifying the filter expressions:
@@ -1290,7 +1290,7 @@ insert into emp values (7934,'MILLER','CLERK',7782,'2000-1-21',1300,null,10);
 insert into emp values (7902,'FORD','ANALYST',7566,'1997-12-5',3000,null,20);
 insert into emp values (7654,'MARTIN','SALESMAN',7698,'1998-12-5',1250,1400,30);
 ```
-Switch to HUE or DAS and query the data.
+Switch to HUE and query the data.
 ```sql
 use hplsql;
 select ename, dname, job, empno, hiredate, loc  

@@ -7,8 +7,8 @@ Analyze Stored Data
 ## Introduction
 This workshop gives you an overview of how to use the Cloudera Data Warehouse service to quickly explore raw data, create curated versions of the data for reporting and dashboarding, and then scale up usage of the curated data by exposing it to more users. It highlights the performance and automation capabilities that help ensure performance is maintained while controlling cost.  
 
-Enitiy-Relation Diagram of tables we use in todays workshop: 
-- fact table: flights (86mio rows) 
+Enitiy-Relation Diagram of tables we use in todays workshop:
+- fact table: flights (86mio rows)
 - dimension tables: airlines (1.5k rows), airports (3.3k rows) and planes (5k rows)
 
 
@@ -30,8 +30,8 @@ You have to set your **workload password**.
 ## Lab 1 - Create Database
 *Do all these steps as the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
-Navigate to Data Warehouse, then Virtual Warehouse and open the SQL Authoring tool DAS or HUE.
- 
+Navigate to Data Warehouse, then Virtual Warehouse and open the SQL HUE Authoring tool.
+
 Create new database for your user to be used, or use one that is already created for you.
 
 ```sql
@@ -48,29 +48,29 @@ Run DDL to create external tables on the CSV data files, which are already in cl
 
 ```sql
 drop table if exists flights_csv;
-CREATE EXTERNAL TABLE flights_csv(month int, dayofmonth int, 
- dayofweek int, deptime int, crsdeptime int, arrtime int, 
- crsarrtime int, uniquecarrier string, flightnum int, tailnum string, 
- actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int, 
- depdelay int, origin string, dest string, distance int, taxiin int, 
- taxiout int, cancelled int, cancellationcode string, diverted string, 
- carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, 
-lateaircraftdelay int) 
-ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
+CREATE EXTERNAL TABLE flights_csv(month int, dayofmonth int,
+ dayofweek int, deptime int, crsdeptime int, arrtime int,
+ crsarrtime int, uniquecarrier string, flightnum int, tailnum string,
+ actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int,
+ depdelay int, origin string, dest string, distance int, taxiin int,
+ taxiout int, cancelled int, cancellationcode string, diverted string,
+ carrierdelay int, weatherdelay int, nasdelay int, securitydelay int,
+lateaircraftdelay int)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
 STORED AS TEXTFILE LOCATION '/airlinedata-csv/flights' tblproperties("skip.header.line.count"="1");
 
 drop table if exists planes_csv;
-CREATE EXTERNAL TABLE planes_csv(tailnum string, owner_type string, manufacturer string, issue_date string, model string, status string, aircraft_type string, engine_type string, year int) 
-ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
+CREATE EXTERNAL TABLE planes_csv(tailnum string, owner_type string, manufacturer string, issue_date string, model string, status string, aircraft_type string, engine_type string, year int)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
 STORED AS TEXTFILE LOCATION '/airlinedata-csv/planes' tblproperties("skip.header.line.count"="1");
 
 drop table if exists airlines_csv;
-CREATE EXTERNAL TABLE airlines_csv(code string, description string) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
+CREATE EXTERNAL TABLE airlines_csv(code string, description string) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
 STORED AS TEXTFILE LOCATION '/airlinedata-csv/airlines' tblproperties("skip.header.line.count"="1");
 
 drop table if exists airports_csv;
-CREATE EXTERNAL TABLE airports_csv(iata string, airport string, city string, state DOUBLE, country string, lat DOUBLE, lon DOUBLE) 
-ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' 
+CREATE EXTERNAL TABLE airports_csv(iata string, airport string, city string, state DOUBLE, country string, lat DOUBLE, lon DOUBLE)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
 STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.header.line.count"="1");
 ```
 
@@ -182,8 +182,8 @@ drop table if exists planes_orc;
 create table planes_orc as select * from planes_csv;
 
 drop table if exists flights_orc;
-create table flights_orc partitioned by (month) as 
-select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
+create table flights_orc partitioned by (month) as
+select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay
 from flights_csv;
 
 ```
@@ -236,10 +236,10 @@ ORDER BY
 ```
 
 Go to Queries page, then click on the query that just ran, then scroll down to DAG INFO,
-choose DAG COUNTERS, then filter for 'cache', then show CACHE_MISS_BYTES and/or CACHE_HIT_BYTES. 
+choose DAG COUNTERS, then filter for 'cache', then show CACHE_MISS_BYTES and/or CACHE_HIT_BYTES.
 Take note of the query run time too.
 
-Note:  sometimes it takes up to a few minutes for DAS to parse the query metrics and expose them in the UI.
+Note:  sometimes it takes up to a few minutes for HUE Query Processor to parse the query metrics and expose them in the UI.
 
 Run query again.
 Check the cache metrics again to see the improved hit rate.
@@ -252,7 +252,7 @@ Check the cache metrics again to see the improved hit rate.
 
 Create materialized view (MV). This will cause Hive to transparently rewrite queries, when possible, to use the MV instead of the base tables.
 
-Add constraints for better query and refresh 
+Add constraints for better query and refresh
 ```sql
 ALTER TABLE airlines_orc ADD CONSTRAINT airlines_pk PRIMARY KEY (code) DISABLE NOVALIDATE;
 ALTER TABLE flights_orc ADD CONSTRAINT airlines_fk FOREIGN KEY (uniquecarrier) REFERENCES airlines_orc(code) DISABLE NOVALIDATE RELY;
@@ -281,27 +281,27 @@ SHOW MATERIALIZED VIEWS in DB_USER0**;
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
-First create a table for incremental data 
+First create a table for incremental data
 
 ```sql
 
 drop table if exists flights_orc_incr;
 
 create table flights_orc_incr
-(dayofmonth int, dayofweek int, deptime int, crsdeptime int, arrtime int, 
- crsarrtime int, uniquecarrier string, flightnum int, tailnum string, 
- actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int, 
- depdelay int, origin string, dest string, distance int, taxiin int, 
- taxiout int, cancelled int, cancellationcode string, diverted string, 
- carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, 
+(dayofmonth int, dayofweek int, deptime int, crsdeptime int, arrtime int,
+ crsarrtime int, uniquecarrier string, flightnum int, tailnum string,
+ actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int,
+ depdelay int, origin string, dest string, distance int, taxiin int,
+ taxiout int, cancelled int, cancellationcode string, diverted string,
+ carrierdelay int, weatherdelay int, nasdelay int, securitydelay int,
  lateaircraftdelay int)
 PARTITIONED BY (month int);
 ```
-Now insert 1000 records as a new month 
+Now insert 1000 records as a new month
 
 ```sql
 
-insert into flights_orc_incr select 15 as month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay 
+insert into flights_orc_incr select 15 as month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay
 from flights_orc limit 1000;
 ```
 
@@ -319,7 +319,7 @@ ALTER MATERIALIZED VIEW traffic_cancel_airlines REBUILD;
 ```
 
 
-Run dashboard query again to explore the usage of the MV. 
+Run dashboard query again to explore the usage of the MV.
 
 ```sql
 SET hive.query.results.cache.enabled=false;
@@ -327,7 +327,7 @@ SET hive.query.results.cache.enabled=false;
 SELECT airlines.code AS code,  MIN(airlines.description) AS description,
           flights.month AS month,
           sum(flights.cancelled) AS cancelled
-FROM flights_orc flights , airlines_orc airlines 
+FROM flights_orc flights , airlines_orc airlines
 WHERE flights.uniquecarrier = airlines.code
 group by airlines.code, flights.month;
 ```
@@ -338,9 +338,9 @@ ALTER MATERIALIZED VIEW traffic_cancel_airlines DISABLE REWRITE;
 ```
 Now repeat the first part of this step to see the different query plan, which no longer uses the MV.
 
-Notice the difference in the explain 
+Notice the difference in the explain
 
-With query rewrite read the **materialized view** : 
+With query rewrite read the **materialized view** :
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.003.png)
 
@@ -353,10 +353,10 @@ No query rewrite: Read flights (86mio rows) and airlines (1.5k rows) with merge 
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.005.png)
 
-We create a new SDC table ***airline\_scd*** table and add columns valid\_from and valid\_to. Then loading the initial 1000 rows into this SDC table. 
+We create a new SDC table ***airline\_scd*** table and add columns valid\_from and valid\_to. Then loading the initial 1000 rows into this SDC table.
 
 
-Next step is to mock up new data and change data in the table ***airlines\_stage***. 
+Next step is to mock up new data and change data in the table ***airlines\_stage***.
 
 Finally merging these two tables with a single MERGE command to maintain the historical data and check the results.
 
@@ -389,7 +389,7 @@ update airlines_stage set description ='SDC Demo Update' where code in ('02Q','0
 Perform the SCD type 2 Merge Command
 
 ```sql
-merge into airlines_scd 
+merge into airlines_scd
 using (
  -- The base staging data.
  select
@@ -408,7 +408,7 @@ using (
 ) sub
 on sub.join_key = airlines_scd.code
 when matched
- and sub.description <> airlines_scd.description 
+ and sub.description <> airlines_scd.description
  then update set valid_to = current_date()
 when not matched
  then insert values (sub.code, sub.description, current_date(), null);
@@ -420,7 +420,7 @@ Confirm that te new data is updated, table should have 1493 records.
 select count(*) from airlines_scd;
 ```
 
-View the changed records 
+View the changed records
 ```sql
 select * from airlines_scd where code in ('02Q','04Q')
 ```
@@ -440,13 +440,13 @@ Results
 
 
 -----
-## Lab 6 - Data Security & Governance 
+## Lab 6 - Data Security & Governance
 
-The combination of the Data Warehouse with SDX offers a list of powerful features like rule-based masking columns based on a user’s role and/or group association or rule-based row filters. 
+The combination of the Data Warehouse with SDX offers a list of powerful features like rule-based masking columns based on a user’s role and/or group association or rule-based row filters.
 
 For this workshop we are going to explore Attribute-Based Access Control a.k.a. Tage-based security policies.
 
-First we are going to create a series of tables in your work database. 
+First we are going to create a series of tables in your work database.
 
 In the SQL editor, select your database and run this script:
 
@@ -531,7 +531,7 @@ We can actually check this easily by using the lineage graph to navigate to a do
 
 This will give us the metadata for the “age” column in a derived table. Note the information on “Propagated Classifications”:
    ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.013.png)
-Try to query all columns from the “emp\_all” table again in DAS – by simply executing the last query again.
+Try to query all columns from the “emp\_all” table again in HUE – by simply executing the last query again.
 Why did we get an error now? There exists a policy in Ranger that denies all members of the hands-on lab group access to Hive data that is classified as “PII”. Let’s check that out. Like before for Atlas, open the Ranger UI via the triple-dot menu in you warehouse’s Database Catalog: ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.014.png)
 
 In the Ranger UI, select the “Audit” menu and limit the amount of data displayed by specifying the filter expressions:
@@ -548,7 +548,7 @@ In the Ranger UI, select the “Audit” menu and limit the amount of data displ
 Easily create rich, interactive dashboards that accelerate analytical insights across your enterprise.
 CDP Data Visualization enables data engineers, business analysts, and data scientists to quickly and easily explore data, collaborate, and share insights across the data lifecycle—from data ingest to data insights and beyond.
 
-Open DataViz 
+Open DataViz
 
 
 |**Step**|**Description**|||
@@ -607,12 +607,12 @@ Open DataViz
 
 -----
 ## (Optional Bonus Material)
-1. Run load test to simulate adding many more end users. Then view results of autoscaling. Discuss how autoscaling works, and how it allows for easy, cost-effective scaling. 
+1. Run load test to simulate adding many more end users. Then view results of autoscaling. Discuss how autoscaling works, and how it allows for easy, cost-effective scaling.
 
 |-- Optional step. Can be just a discussion if no load test is actually done.|
 | :- |
 
-1. Discuss how workload aware autoscaling runs ETL style queries on dedicated executor group to not interfere with shorter queries. 
+1. Discuss how workload aware autoscaling runs ETL style queries on dedicated executor group to not interfere with shorter queries.
 
 |<p>-- Start the creation process for a Hive VW and see the **“Query Isolation” option.**</p><p>-- No need to continue to create the VW.</p>|
 | :- |
@@ -630,15 +630,15 @@ select flights_orc_partitioned.uniquecarrier AS airline_code,
 FROM airlinedata.flights_orc
 where arrdelay > 0
 GROUP BY uniquecarrier;
-							
+
 ```
-Fast retrieval a few rows 
+Fast retrieval a few rows
 ```sql
 select airline_code,sum_flights,sum_arrdelay,
 	  sketch.qt_getPmf(sk_arrdelay,10,20,30,40,50,60,70,80,90,100),			
 	  sketch.qt_getCdf(sk_arrdelay,10,20,30,40,50,60,70,80,90,100),
 	  sketch.qt_getK(sk_arrdelay),						
-	  sketch.qt_getN(sk_arrdelay)	
+	  sketch.qt_getN(sk_arrdelay)
 from airlinedata.flights_airlines_sk
 group by airline_code
 ```
@@ -648,7 +648,7 @@ group by airline_code
 ```sql
 drop view if exists airlinedata.vw_flights_sk_airlines;
 create view airlinedata.vw_flights_sk_airlines as					
-select airline_code, 
+select airline_code,
    sum_flights, sum_arrdelay, min_arrdelay, max_arrdelay, avg_arrdelay,
    sketch.qt_getQuantile(sk_arrdelay,0.1) as arrival_delay_10,
    sketch.qt_getQuantile(sk_arrdelay,0.2) as arrival_delay_20,
@@ -665,7 +665,7 @@ from airlinedata.flights_airlines_sk;
 select * from airlinedata.vw_flights_sk_airlines;
 ```
 
-PDF / CDF - Airline Histogram -  create Distribution Histograms (here as Excel) 
+PDF / CDF - Airline Histogram -  create Distribution Histograms (here as Excel)
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.095.png)
 
@@ -673,7 +673,7 @@ PDF / CDF - Airline Histogram -  create Distribution Histograms (here as Excel)
 Count distinct with HLL algorithm  
 
 
-Optional step how many unique flights 
+Optional step how many unique flights
 
 ```sql
 create table airlinedata.flights_sketch as
@@ -693,7 +693,7 @@ from airlinedata.flights_sketch;
 ||
 | :- |
 
-Explain - extreme fast query a table 
+Explain - extreme fast query a table
 
 ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.096.png)
 
@@ -726,11 +726,11 @@ What flights are most frequently cancelled
 ```sql
 drop table if exists airlinedata.flights_frq_sketch; 					  
 create table airlinedata.flights_frq_sketch (cancelled int, sk_flightnum binary);
-insert into airlinedata.flights_frq_sketch 
+insert into airlinedata.flights_frq_sketch
 select flights_orc.cancelled, sketch.frq_data2sketch( cast(concat(flights_orc.uniquecarrier,flights_orc.flightnum) as string), 8192 )
 FROM airlinedata.flights_orc
 GROUP BY flights_orc.cancelled;
-							
+
 select sketch.frq_get_items(sk_flightnum, 'NO_FALSE_POSITIVES')
 from airlinedata.flights_frq_sketch;
 ```
@@ -751,9 +751,9 @@ Results
 validate the results
 
 ```sql
-select concat(flights_orc.uniquecarrier,flights_orc.flightnum) as flight, 
+select concat(flights_orc.uniquecarrier,flights_orc.flightnum) as flight,
        count(1) as num_cancelled
-from airlinedata.flights_orc 
+from airlinedata.flights_orc
 where flightnum = 65 and cancelled = 1
 group by concat(flights_orc.uniquecarrier,flights_orc.flightnum)
 order by num_cancelled desc;
@@ -767,5 +767,3 @@ order by num_cancelled desc;
 
 
 | :- |
-
-
