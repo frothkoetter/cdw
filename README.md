@@ -252,6 +252,8 @@ group by
    a.leg1uniquecarrier;
 ```
 
+Results: 
+
 |carrier	|passenger|
 | :- | :- |
 | 9E | 340 |
