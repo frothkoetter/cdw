@@ -252,6 +252,16 @@ group by
    a.leg1uniquecarrier;
 ```
 
+|carrier	|passenger|
+| :- | :- |
+| 9E | 340 |
+| AA | 342 |
+| DL | 29673 |
+| EV | 19911 |
+...
+
+
+
 -----
 ## Lab 4 - Managed Tables
 
