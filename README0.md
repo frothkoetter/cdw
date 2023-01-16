@@ -62,15 +62,6 @@ CREATE EXTERNAL TABLE airports_csv(iata string, airport string, city string, sta
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
 STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.header.line.count"="1");
 
-drop table if exists unique_tickets_csv;
-CREATE external TABLE unique_tickets_csv (ticketnumber BIGINT, leg1flightnum BIGINT, leg1uniquecarrier STRING, leg1origin STRING,   leg1dest STRING, leg1month BIGINT, leg1dayofmonth BIGINT,   
- leg1dayofweek BIGINT, leg1deptime BIGINT, leg1arrtime BIGINT,   
- leg2flightnum BIGINT, leg2uniquecarrier STRING, leg2origin STRING,   
- leg2dest STRING, leg2month BIGINT, leg2dayofmonth BIGINT,   leg2dayofweek BIGINT, leg2deptime BIGINT, leg2arrtime BIGINT )
-ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
-STORED AS TEXTFILE LOCATION '/airlinedata-csv/unique_tickets'
-tblproperties("skip.header.line.count"="1");
-
 ```
 
 
@@ -189,9 +180,92 @@ Results:
 |Turbo-Fan|DC9-82(MD-82)|20075023|
 |Turbo-Fan|MK-88|19482652|
 
+## Lab 3 - Importing Data with HUE
+
+Import the passenger data into CDW from your computer as follows:
+
+Download the file to your computer : https://docs.cloudera.com/cdp-public-cloud-patterns/cloud/passengertickets.csv
+
+Go to Importer and click .. at the end of the Path field
+
+![](images/image0011.png)
+
+Type s3a:// in the address text box and press enter.
+
+The S3 buckets associated with the CDW environment are displayed.
+
+You can narrow down the list of results using the search option.
+
+Enter: cdw-vhol
+
+![](images/image0012.png)
+
+Click on Create folder and use the same as your database i.e. “db\_user001”
+
+![](images/image0013.png)
+
+Click on Upload a file
+
+Navigate on your computer to the downloaded passengertickets.csv file and the file is uploaded into the S3 bucket.
+
+Select the file passengertickets.csv to import.
+
+![](images/image0014.png)
+
+HUE displays the preview of the table along with the format.
+Hue automatically detects the field separator, record separator, and the quote character from the CSV file. If you want to override a specific setting, select a different value from the drop-down list.
+
+![](images/image0015.png)
+
+Click Next.
+
+On this page under DESTINATION, enter your database_name.unique_tickets_csv i.e “db\_user001”.unique_tickets_csv in the Name field.
+
+![](images/image0016.png)
+
+Expand Extras and select the Store in Default location option.
+
+Click Submit.
+
+The CREATE TABLE query is triggered and the table unique_tickets_csv is created in your database.
+
+![](images/image0017.png)
+
+HUE displays the logs and opens the Table Browser from which you can view the newly created table when the operation completes successfully.
+
+![](images/image0018.png)
+
+Then imported the file the table is ready to query.
+
+Query: Number of passengers on the airline that has long, planned layovers for an international
+flight
+
+```sql
+SELECT
+   a.leg1uniquecarrier as carrier,
+   count(a.leg1uniquecarrier) as passengers
+FROM
+   unique_tickets_csv a
+where
+   a.leg2deptime - a.leg1arrtime>90
+group by
+   a.leg1uniquecarrier;
+```
+
+Results: 
+
+|carrier	|passenger|
+| :- | :- |
+| 9E | 340 |
+| AA | 342 |
+| DL | 29673 |
+| EV | 19911 |
+...
+
+
 
 -----
-## Lab 3 - Managed Tables
+## Lab 4 - Managed Tables
 
 Run “CREATE TABLE AS SELECT” queries to create full ACID ORC type of the tables. This creates curated versions of the data which are optimal for BI usage.
 
@@ -443,7 +517,7 @@ Result:
 |3 |05Q |"Comlux Aviation |
 
 -----
-## Lab 4 - Materialized View
+## Lab 5 - Materialized View
 Reminder: use your own “db\_user001”..”db\_user020” database.
 
 Materialized views (MV) cause Hive to transparently rewrite queries, when possible, to use the MV instead of the base tables.
@@ -507,7 +581,7 @@ Navigate to the query processor, select the above query and the visual explain y
 
 
 ------
-## Lab 5 - Time Travel and Partition Evolution
+## Lab 6 - Time Travel and Partition Evolution
 
 Cloudera Iceberg is a high-performance format for huge analytic tables for engines like Spark, Impala Flink and Hive to safely work with the same tables, at the same time.
 
@@ -641,7 +715,7 @@ This example shows that the execution time is greatly decreased because less dat
 
 
 ------
-## Lab 6 - Slowly Changing Dimensions (SCD) - TYPE 2
+## Lab 7 - Slowly Changing Dimensions (SCD) - TYPE 2
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
@@ -730,7 +804,7 @@ Results
 
 
 -----
-## Lab 7 - Data Security & Governance
+## Lab 8 - Data Security & Governance
 
 The combination of the Data Warehouse with SDX offers a list of powerful features like rule-based masking columns based on a user’s role and/or group association or rule-based row filters.
 
@@ -835,7 +909,7 @@ In the Ranger UI, select the “Audit” menu and limit the amount of data displ
 
 
 -----
-## Lab 8 - Data Visualization
+## Lab 9 - Data Visualization
 
 
 1. Use Data Visualization to further explore the data set.
