@@ -498,7 +498,7 @@ FROM
 WHERE
  flights.uniquecarrier = airlines.code
 group by
- airlines.code
+ airlines.description;
 ```
 
 Navigate to the query processor, select the above query and the visual explain you see query rewrite:
