@@ -264,7 +264,7 @@ Scrol down to row 49
 | | numRows| 8628933 |
 
  ```sql
-show partitions flights_orc
+show partitions flights_orc;
  ```
 Result: showing all 15 partitions with keys
 
@@ -389,7 +389,7 @@ SELECT
   code,
   description
 FROM
-  airlines_orc;
+  airlines_csv;
 
 SELECT
  *
