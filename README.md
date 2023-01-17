@@ -640,7 +640,17 @@ INFO  : Completed executing command(queryId=hive_20220427111723_1f126db0-84aa-4d
 The above query has read the full year data of the partition year=1995.
 
 ```sql
-select year, month, count(1) from flights_ice where  year = 2022 and month = 1 group by year, month;
+select
+  year,
+  month,
+  count(1)
+from
+  flights_ice
+where  
+  year = 2022 and month = 1
+group by
+  year,
+  month;
  ```
 
 INFO  : Completed executing command(queryId=hive_20220427111723_1f126db0-84aa-4df6-b0a1-065a4f9001e4); Time taken: 0.466 seconds
