@@ -620,7 +620,17 @@ Now lets see the impact what the difference is, lets run two queries and note th
 
 Count the records for one year and month:
 ```sql
-select year, month, count(1) from flights_ice where  year = 1995 and month = 1 group by year, month;
+select
+  year,
+  month,
+  count(1)
+from
+  flights_ice
+where  
+  year = 1995 and month = 1
+group by
+  year,
+  month;
 ```
 
 In Hue you can find the runtime at the end of the output:
