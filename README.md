@@ -661,11 +661,15 @@ This example shows that the execution time is greatly decreased because less dat
 
 ## Lab 5 - optinal Streaming Data
 
-Streaming data ingested by CDF Nifi with realtime enrichments of weather information of the destination airport and CML Model API for predicting the delay.
+The dataflow is as follows:
+ 1) Streaming data ingested every minute by CDF Nifi new flight events.
+ 2) Realtime weather information from a OpenWeather API of the destination airport
+ 3) Enrichment of the event with CML Model API for predicting the delay.
+ 4) Store the events in micro batches (5Min) in a Iceberg Table
 
 ![](images/image022.png)
 
-Run DDL to create a view on a ICEBERG table in the airlinedata database.
+You create a view on a streaming ICEBERG table in the airlinedata database.
 
 ```sql
 drop view flights_streaming_ice_cve;
@@ -714,7 +718,7 @@ order by
  deptime desc
 limit 10;
 ```
- 
+
 ------
 ## Lab 6 - Slowly Changing Dimensions (SCD) - TYPE 2
 
