@@ -659,7 +659,62 @@ The second query has read only the month of the partition year=2022 and month=1.
 
 This example shows that the execution time is greatly decreased because less data was read.
 
+## Lab 5 - optinal Streaming Data
 
+Streaming data ingested by CDF Nifi with realtime enrichments of weather information of the destination airport and CML Model API for predicting the delay.
+
+![](images/image022.png)
+
+Run DDL to create a view on a ICEBERG table in the airlinedata database.
+
+```sql
+drop view flights_streaming_ice_cve;
+create view flights_streaming_ice_cve as
+select
+  year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum,
+  actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, cast( distance as integer ) as distance, taxiin, taxiout,
+  cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay,
+  origin_lon, origin_lat, cast( dest_lon as float) as dest_lon, cast(dest_lat as float) as dest_lat,
+  cast( translate( substr(prediction, instr(prediction,'prediction=')+11,1 ),'}','') as integer) as prediction,
+  cast( translate( substr(prediction, instr(prediction,'proba=')+6,4 ),'}','') as float) as proba,
+  cast( translate( substr(prediction, instr(prediction,'prediction_delay=')+17,2 ),'}','') as integer) prediction_delay,
+  cast( translate( substr( weather_json, instr(weather_json,'temp=')+5,5 ),',','') as float) as  temp,
+  cast( translate( substr( weather_json, instr(weather_json,'pressure=')+9,6 ),',','') as float) as  presssure,
+  cast( translate( substr( weather_json, instr(weather_json,'humidity=')+9,2 ),',','') as float) as  humidity,
+  cast( translate( substr( weather_json, instr(weather_json,'speed=')+6,5 ),',','') as float) as  wind_speed,
+  cast( translate( substr( weather_json, instr(weather_json,'all=')+4,3 ),'}','') as float) as clouds
+from
+  airlinedata.flights_streaming_ice;
+```
+
+Run a SQL command to select the last ten delayed flights.
+
+```sql
+select
+ year,
+ month,
+ dayofmonth,
+ deptime,
+ uniquecarrier,
+ flightnum,
+ origin,
+ dest,
+ distance,
+ prediction,
+ proba,
+ prediction_delay,
+ temp,
+ wind_speed,
+ clouds
+from
+ flights_streaming_ice_cve
+where
+ prediction = 1
+order by
+ deptime desc
+limit 10;
+```
+ 
 ------
 ## Lab 6 - Slowly Changing Dimensions (SCD) - TYPE 2
 
