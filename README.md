@@ -664,9 +664,7 @@ This example shows that the execution time is greatly decreased because less dat
 The dataflow is as follows:
  1) create a Iceberg table in CDW.
 
- 2) Streaming data ingested every minute by CDF Nifi new flight events. These raw events are enricht with realtime weather information from a OpenWeather API of the destination airport and with the prediction the delay from the CML Model API.
-
- Store the events in micro batches (5Min) directly into an Iceberg Table
+ 2) Streaming data ingested every minute by CDF Nifi new flight events. These raw events are enricht with realtime weather information from a OpenWeather API of the destination airport and with the prediction the delay from the CML Model API.Store the events in micro batches (5Min) directly into an Iceberg Table
 
  3) create a data mart with automatic refesh
 
