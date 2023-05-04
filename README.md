@@ -662,45 +662,27 @@ This example shows that the execution time is greatly decreased because less dat
 ## Lab 5 - optinal Streaming Data
 
 The dataflow is as follows:
- 1) Streaming data ingested every minute by CDF Nifi new flight events.
- 2) Enrichment with realtime weather information from a OpenWeather API of the destination airport
- 3) Enrichment with the prediction the delay from the CML Model API
- 4) Store the events in micro batches (5Min) directly into an Iceberg Table
+ 1) create a Iceberg table in CDW.
 
-![](images/image022.png)
+ 2) Streaming data ingested every minute by CDF Nifi new flight events. These raw events are enricht with realtime weather information from a OpenWeather API of the destination airport and with the prediction the delay from the CML Model API.
 
-During the worshop realtime data is ingested and you can query the micro batch inserts from CDF
+ Store the events in micro batches (5Min) directly into an Iceberg Table
 
-```sql
-select
- *
-from
- airlinedata.flights_streaming_ice.history
-order by
-made_current_at desc
-limit 10;
-```
+ 3) create a data mart with automatic refesh
 
-You create a view on a streaming ICEBERG table in the airlinedata database.
+
+![](images/image023.png)
+
+During the worshop realtime data is ingested and you can query the micro batch inserts from CDF into table airlinedata.flights_streaming_ice_cve.
+
+Create your own view on the streaming data
 
 ```sql
-drop view flights_streaming_ice_cve;
-create view flights_streaming_ice_cve as
-select
-  year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum,
-  actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, cast( distance as integer ) as distance, taxiin, taxiout,
-  cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay,
-  origin_lon, origin_lat, cast( dest_lon as float) as dest_lon, cast(dest_lat as float) as dest_lat,
-  cast( translate( substr(prediction, instr(prediction,'prediction=')+11,1 ),'}','') as integer) as prediction,
-  cast( translate( substr(prediction, instr(prediction,'proba=')+6,4 ),'}','') as float) as proba,
-  cast( translate( substr(prediction, instr(prediction,'prediction_delay=')+17,2 ),'}','') as integer) prediction_delay,
-  cast( translate( substr( weather_json, instr(weather_json,'temp=')+5,5 ),',','') as float) as  temp,
-  cast( translate( substr( weather_json, instr(weather_json,'pressure=')+9,6 ),',','') as float) as  presssure,
-  cast( translate( substr( weather_json, instr(weather_json,'humidity=')+9,2 ),',','') as float) as  humidity,
-  cast( translate( substr( weather_json, instr(weather_json,'speed=')+6,5 ),',','') as float) as  wind_speed,
-  cast( translate( substr( weather_json, instr(weather_json,'all=')+4,3 ),'}','') as float) as clouds
-from
-  airlinedata.flights_streaming_ice;
+drop view if exists flights_streaming_with_delay_predictions;
+create view flights_streaming_with_delay_predictions
+as
+select *
+from airlinedata.flights_streaming_ice_cve;
 ```
 
 Run a SQL command to select the last ten delayed flights.
@@ -723,13 +705,75 @@ select
  wind_speed,
  clouds
 from
- flights_streaming_ice_cve
+ flights_streaming_with_delay_predictions
 where
  prediction = 1
 order by
- deptime desc
+ year desc, month desc, dayofmonth desc, deptime desc
 limit 10;
 ```
+
+Next create a data mart table:
+
+```sql
+drop table if exists airport_delayed_flights;
+create table airport_delayed_flights (
+ daytime string,
+ dest_airport_iata string,
+ dest_city  string,
+ dest_temp  decimal,
+ dest_wind_speed decimal,
+ dest_pressure  decimal,
+ predicted_delayed int,
+ predicted_delay_min int);
+ ```
+
+Create the scheduler to run the query:
+
+```sql
+drop scheduled query airport_delayed_flights;
+create scheduled query airport_delayed_flights cron '0 */5 * * * ? *' defined as
+insert overwrite airlinedata.airport_delayed_flights
+SELECT
+ concat(year, lpad(month,2,'0'),lpad(dayofmonth,2,'0'),substring(deptime,1,2) ),
+ flights.dest as destination_airport,
+ airports.city as destination_city,
+   max(flights.temp) as dest_temp,
+  max(flights.wind_speed) as dest_wind_speed,
+  max(flights.presssure) as dest_pressure,
+  SUM(flights.prediction) AS predicted_delayed,
+  SUM(flights.prediction_delay) AS predicted_delay_min
+FROM
+ airlinedata.flights_streaming_ice_cve flights,
+ airlinedata.airports_orc airports
+WHERE
+  flights.dest = airports.iata
+GROUP BY
+  concat(year, lpad(month,2,'0'),lpad(dayofmonth,2,'0'),substring(deptime,1,2) ),
+ flights.dest ,
+ airports.city ;
+ ```
+
+ Now aktivate the scheduled query and observe the resultes.
+
+```sql
+alter scheduled query airport_delayed_flights enable;
+alter scheduled query airport_delayed_flights execute;
+
+select * from information_schema.scheduled_queries;
+select * from information_schema.scheduled_executions;
+```
+
+Run the query to check the results.
+
+```sql
+select  *
+from airport_delayed_flights
+where dest_airport_iata = 'BOS'
+order by 1 desc,2 desc, 3 desc;
+```
+
+
 
 ------
 ## Lab 6 - Slowly Changing Dimensions (SCD) - TYPE 2
