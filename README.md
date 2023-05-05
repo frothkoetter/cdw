@@ -665,26 +665,25 @@ During the workshop every minute new flight events are created and stored into t
 
 ![](images/image023.png)
 
-The steps in this lab are as follows:
- 1) Create a view based on the Iceberg table and check that new events coming in
- 2) Create a data mart with automatic refreshed
- 3)
+The steps in this optional lab are as follows:
+ 1) Create a view based on the Iceberg table
+ 2) Check that new events coming in
+ 3) Create a data mart with automatic refreshed
+ 4) Run a BI query
 
-
-
-During the worshop realtime data is ingested and you can query the micro batch inserts from CDF into table airlinedata.flights_streaming_ice_cve.
-
-Create your own view on the streaming data
+Create your a view on the table of the streaming events:
 
 ```sql
 drop view if exists flights_streaming_with_delay_predictions;
 create view flights_streaming_with_delay_predictions
 as
-select *
-from airlinedata.flights_streaming_ice_cve;
+select  
+ *
+from
+ airlinedata.flights_streaming_ice_cve;
 ```
 
-Run a SQL command to select the last ten delayed flights.
+Run a SQL command to select the last ten delayed flights:
 
 ```sql
 select
@@ -701,8 +700,6 @@ select
  clouds
 from
  flights_streaming_with_delay_predictions
-where
- prediction = 1
 order by
  concat(year, lpad(month,2,'0'),lpad(dayofmonth,2,'0'),deptime ) desc
 limit 10;
@@ -726,7 +723,7 @@ create table airport_delayed_flights (
 Create a job with the query scheduler to run the query every 5 minute:
 
 ```sql
-drop scheduled query airport_delayed_flights;
+-- drop scheduled query airport_delayed_flights;
 create scheduled query airport_delayed_flights cron '0 */5 * * * ? *' defined as
 insert overwrite airlinedata.airport_delayed_flights
 SELECT
@@ -752,6 +749,7 @@ GROUP BY
 Lets enable and check that the job is created:
 ```sql
 alter scheduled query airport_delayed_flights enable;
+
 select
   schedule_name,
   enabled,
@@ -766,6 +764,7 @@ where
 Next step is activated job to kick off executions, check the status:
 ```sql
 alter scheduled query airport_delayed_flights execute;
+
 with job_runs as (select
  schedule_name,
  state,
