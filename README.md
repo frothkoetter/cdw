@@ -371,7 +371,7 @@ WHERE
   ```
 
 
-### Defaults - SURROGATE_KEY & SEQUENCE
+### Defaults - Surrogate_key & Sequence
 
 Surrogate keys are easy & distributable & fast, but not in sequence, has gaps.
 
@@ -659,17 +659,18 @@ The second query has read only the month of the partition year=2022 and month=1.
 
 This example shows that the execution time is greatly decreased because less data was read.
 
-## Lab 5 - optinal Streaming Data
+### Optinal step - Streaming Data
 
-The dataflow is as follows:
- 1) create a Iceberg table in CDW.
-
- 2) Streaming data ingested every minute by CDF Nifi new flight events. These raw events are enricht with realtime weather information from a OpenWeather API of the destination airport and with the prediction the delay from the CML Model API.Store the events in micro batches (5Min) directly into an Iceberg Table
-
- 3) create a data mart with automatic refesh
-
+During the workshop every minute new flight events are created and stored into the Iceberg table "airlinedata.flights_streaming_ice_cve" in micro batches every 5 minutes. These raw events are enriched with realtime weather information from a public OpenWeather API of the destination airport and with the prediction the delay from the CML Model API.
 
 ![](images/image023.png)
+
+The steps in this lab are as follows:
+ 1) Create a view based on the Iceberg table and check that new events coming in
+ 2) Create a data mart with automatic refreshed
+ 3)
+
+
 
 During the worshop realtime data is ingested and you can query the micro batch inserts from CDF into table airlinedata.flights_streaming_ice_cve.
 
@@ -687,15 +688,11 @@ Run a SQL command to select the last ten delayed flights.
 
 ```sql
 select
- year,
- month,
- dayofmonth,
- deptime,
+ concat(year, lpad(month,2,'0'),lpad(dayofmonth,2,'0'),deptime ) as deptime,
  uniquecarrier,
  flightnum,
  origin,
  dest,
- distance,
  prediction,
  proba,
  prediction_delay,
@@ -707,7 +704,7 @@ from
 where
  prediction = 1
 order by
- year desc, month desc, dayofmonth desc, deptime desc
+ concat(year, lpad(month,2,'0'),lpad(dayofmonth,2,'0'),deptime ) desc
 limit 10;
 ```
 
@@ -726,52 +723,77 @@ create table airport_delayed_flights (
  predicted_delay_min int);
  ```
 
-Create the scheduler to run the query:
+Create a job with the query scheduler to run the query every 5 minute:
 
 ```sql
 drop scheduled query airport_delayed_flights;
 create scheduled query airport_delayed_flights cron '0 */5 * * * ? *' defined as
 insert overwrite airlinedata.airport_delayed_flights
 SELECT
- concat(year, lpad(month,2,'0'),lpad(dayofmonth,2,'0'),substring(deptime,1,2) ),
+ concat(year, lpad(month,2,'0'),lpad(dayofmonth,2,'0'),substring(deptime,1,2),'00' ),
  flights.dest as destination_airport,
  airports.city as destination_city,
-   max(flights.temp) as dest_temp,
+  max(flights.temp) as dest_temp,
   max(flights.wind_speed) as dest_wind_speed,
   max(flights.presssure) as dest_pressure,
-  SUM(flights.prediction) AS predicted_delayed,
-  SUM(flights.prediction_delay) AS predicted_delay_min
+  sum(flights.prediction) AS predicted_delayed,
+  sum(flights.prediction_delay) AS predicted_delay_min
 FROM
  airlinedata.flights_streaming_ice_cve flights,
  airlinedata.airports_orc airports
 WHERE
   flights.dest = airports.iata
 GROUP BY
-  concat(year, lpad(month,2,'0'),lpad(dayofmonth,2,'0'),substring(deptime,1,2) ),
+  concat(year, lpad(month,2,'0'),lpad(dayofmonth,2,'0'),substring(deptime,1,2),'00' ),
  flights.dest ,
  airports.city ;
  ```
 
- Now aktivate the scheduled query and observe the resultes.
-
+Lets enable and check that the job is created:
 ```sql
 alter scheduled query airport_delayed_flights enable;
-alter scheduled query airport_delayed_flights execute;
-
-select * from information_schema.scheduled_queries;
-select * from information_schema.scheduled_executions;
+select
+  schedule_name,
+  enabled,
+  next_execution,
+  query  
+from
+  information_schema.scheduled_queries
+where
+  `user` = current_user();
 ```
 
-Run the query to check the results.
-
+Next step is activated job to kick off executions, check the status:
 ```sql
-select  *
-from airport_delayed_flights
-where dest_airport_iata = 'BOS'
-order by 1 desc,2 desc, 3 desc;
+alter scheduled query airport_delayed_flights execute;
+with job_runs as (select
+ schedule_name,
+ state,
+ start_time,
+ elapsed
+from
+  information_schema.scheduled_executions )
+select
+ job_runs.*
+from
+  information_schema.scheduled_queries jobs
+join job_runs
+  on
+   `user` = current_user()
+  and
+   jobs.schedule_name = job_runs.schedule_name;
+  ```
+
+Check that rows for Boston airport in the data mart:
+```sql
+select  
+ *
+from
+ airport_delayed_flights
+where
+ dest_airport_iata = 'BOS'
+order by 1 desc;
 ```
-
-
 
 ------
 ## Lab 6 - Slowly Changing Dimensions (SCD) - TYPE 2
