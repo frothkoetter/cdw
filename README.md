@@ -763,7 +763,7 @@ from
  flights_streaming__tmp;
 ```
 
-And finally the data is swept into the final table:
+And finally the data is swept into the new table:
 
 ```SQL
 with row_ingest as ( select * from flights_streaming__tmp),
@@ -811,7 +811,7 @@ SELECT
   sum(flights.prediction) AS predicted_delayed,
   sum(flights.prediction_delay) AS predicted_delay_min
 FROM
- airlinedata.flights_streaming_ice_cve flights,
+ airlinedata.flights_final flights,
  airlinedata.airports_orc airports
 WHERE
   flights.dest = airports.iata
