@@ -834,6 +834,11 @@ from
 where
   `user` = current_user();
 ```
+The query output should be like this:
+
+|schedule_name	|enabled	|next_execution	|query |
+| :- | :- | :- | :- |
+|airport_delayed_flights | true | 2023-05-15 17:55:00 | insert overwrite airlinedata.airport_delayed_flights SELECT  .... |
 
 Next step is activated job to kick off executions, check the status:
 ```sql
@@ -860,7 +865,7 @@ You see the job finished status:
 |job_runs.schedule_name	|job_runs.state	|job_runs.start_time	|job_runs.elapsed|
 | :- | :- | :- | :- |
 |airport_delayed_flights | FINISHED | 2023-05-15 17:48:06 | 3 |
-| :- | :- | :- | :- |
+
 
 Check that rows for Boston airport in the data mart:
 ```sql
