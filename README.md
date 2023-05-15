@@ -807,7 +807,7 @@ SELECT
  airports.city as destination_city,
   max(flights.temp) as dest_temp,
   max(flights.wind_speed) as dest_wind_speed,
-  max(flights.presssure) as dest_pressure,
+  max(flights.pressure) as dest_pressure,
   sum(flights.prediction) AS predicted_delayed,
   sum(flights.prediction_delay) AS predicted_delay_min
 FROM
@@ -824,7 +824,6 @@ GROUP BY
 Lets enable and check that the job is created:
 ```sql
 alter scheduled query airport_delayed_flights enable;
-
 select
   schedule_name,
   enabled,
@@ -839,7 +838,6 @@ where
 Next step is activated job to kick off executions, check the status:
 ```sql
 alter scheduled query airport_delayed_flights execute;
-
 with job_runs as (select
  schedule_name,
  state,
@@ -857,6 +855,12 @@ join job_runs
   and
    jobs.schedule_name = job_runs.schedule_name;
   ```
+You see the job finished status:
+
+|job_runs.schedule_name	|job_runs.state	|job_runs.start_time	|job_runs.elapsed|
+| :- | :- | :- | :- |
+|airport_delayed_flights | FINISHED | 2023-05-15 17:48:06 | 3 |
+| :- | :- | :- | :- |
 
 Check that rows for Boston airport in the data mart:
 ```sql
