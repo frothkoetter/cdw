@@ -38,15 +38,6 @@
 #
 # ###########################################################################
 
-#############################################################################
-#
-#  Adaptations for project Eyjafjallajökull  are marked by 
-# inline comments starting with # PE
-#
-#
-#
-#
-#############################################################################
 import numpy as np
 import pandas as pd
 import cdsw
@@ -56,8 +47,8 @@ from random import randint  # PEadaptation
 
 args = {"feature" : "US,DCA,BOS,1,16"}
 
-ct = load("models/ct.joblib")
-pipe = load("models/pipe.joblib")
+ct = load("cml/prebuild-models/ct.joblib")
+pipe = load("cml/prebuild-models/pipe.joblib")
 
 
 @cdsw.model_metrics
@@ -91,6 +82,7 @@ def predict_delayed(args):    # PE ... changed function name
     else:                         # PE
        delay = 0                  # PE
     
+    cdsw.track_metric("delay", int(delay))
     # PE nexl line changed
     response = {"prediction": int(prediction), "proba": str(proba), "prediction_delay": int(delay) } # PE ... added prediction_delay
 
