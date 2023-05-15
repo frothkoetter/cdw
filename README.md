@@ -795,31 +795,33 @@ create table airport_delayed_flights (
  predicted_delay_min int);
  ```
 
-Create a job with the query scheduler to run the query every 5 minute:
+Create a job with the query scheduler to run the query every 15 minute:
 
 ```sql
 -- drop scheduled query airport_delayed_flights;
-create scheduled query airport_delayed_flights cron '0 */5 * * * ? *' defined as
+create scheduled query airport_delayed_flights cron '0 */15 * * * ? *' defined as
 insert overwrite airlinedata.airport_delayed_flights
 SELECT
- concat(year, lpad(month,2,'0'),lpad(dayofmonth,2,'0'),substring(deptime,1,2),'00' ),
- flights.dest as destination_airport,
- airports.city as destination_city,
-  max(flights.temp) as dest_temp,
-  max(flights.wind_speed) as dest_wind_speed,
-  max(flights.pressure) as dest_pressure,
-  sum(flights.prediction) AS predicted_delayed,
-  sum(flights.prediction_delay) AS predicted_delay_min
+  date_format( from_unixtime( ( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
+        substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )))) , 'yyyy/MM/dd HH:00:00'),
+   flights.dest as destination_airport,
+   airports.city as destination_city,
+    max(flights.temp) as dest_temp,
+    max(flights.wind_speed) as dest_wind_speed,
+    max(flights.pressure) as dest_pressure,
+    sum(flights.prediction) AS predicted_delayed,
+    sum(flights.prediction_delay) AS predicted_delay_min
 FROM
- airlinedata.flights_final flights,
- airlinedata.airports_orc airports
+   airlinedata.flights_final flights,
+   airlinedata.airports_orc airports
 WHERE
-  flights.dest = airports.iata
+    flights.dest = airports.iata
 GROUP BY
-  concat(year, lpad(month,2,'0'),lpad(dayofmonth,2,'0'),substring(deptime,1,2),'00' ),
- flights.dest ,
- airports.city ;
- ```
+   date_format( from_unixtime( ( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
+        substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )))) , 'yyyy/MM/dd HH:00:00'),
+   flights.dest ,
+   airports.city ;
+```
 
 Lets enable and check that the job is created:
 ```sql
