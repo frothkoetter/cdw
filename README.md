@@ -972,21 +972,21 @@ In the SQL editor, select your database and run this script:
 ```sql
 CREATE TABLE emp_fname (id int, fname string);
 insert into emp_fname(id, fname) values (1, 'Carl'),(2, 'Clarence');
-b
+
 CREATE TABLE emp_lname (id int, lname string);
 insert into emp_lname(id, lname) values (1, 'Rickenbacker'), (2, 'Fender');
 
 CREATE TABLE emp_age (id int, age smallint);
 insert into emp_age(id, age) values (1, 35),(2, 55);
 
-CREATE TABLE emp_denom (id int, denom char(2));
-insert into emp_denom(id, denom) values (1, 'rk'),(2, 'na');
+CREATE TABLE emp_denom (id int, denom char(2), email string);
+insert into emp_denom(id, denom, email) values (1, 'rk','cr@yahoo.com'),(2, 'na','cfender@gmail.com');
 
 CREATE TABLE emp_id (id int, empid integer);
 insert into emp_id(id, empid) values (1, 1146651),(2, 239125);
 
 CREATE TABLE emp_all as
-(select a.id, a.fname, b.lname, c.age, d.denom, e.empid from emp_fname a
+  (select a.id, a.fname, b.lname, c.age, d.denom,d.email,e.empid from emp_fname a
 	inner join emp_lname b on b.id = a.id
 	inner join emp_age c on c.id = b.id
 	inner join emp_denom d on d.id = c.id
