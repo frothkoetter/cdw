@@ -737,9 +737,9 @@ with flights as ( select
   cast( translate( substr( weather_json, instr(weather_json,'pressure=')+9,6 ),',','') as float) ,
   cast( translate( substr( weather_json, instr(weather_json,'humidity=')+9,2 ),',','') as float) ,
   cast( translate( substr( weather_json, instr(weather_json,'speed=')+6,5 ),',','') as float) ,
-  cast( translate( substr( weather_json, instr(weather_json,'all=')+4,3 ),'}','') as float)
+  cast( translate( substr( weather_json, instr(weather_json,'all=')+4,3 ),'}','') as string)
  from
-  flights_streaming_ice
+  airlinedata.flights_streaming_ice
   ),
 offset as ( select max(to_ts) as max_ts from flights_batch_offset)
 insert into flights_streaming__tmp
@@ -826,8 +826,9 @@ The output should like this for every 15 minutes window
 | 2023-05-22 10:00:00 |	2023-05-22 10:15:00	| 29 |
 | 2023-05-22 10:15:00 |	2023-05-22 10:30:00	| 405 |
 | 2023-05-22 10:30:00	| 2023-05-22 10:45:00	| 423 |
+(more rows ... )
 
-Next create a data mart table:
+### Optinal step - Data Marts
 
 ```sql
 drop table if exists airport_delayed_flights;
