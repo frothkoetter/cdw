@@ -785,6 +785,47 @@ Clean up;
 drop table if exists flights_streaming__tmp;
 ```
 
+Lets run two checks, checking the offset table
+```sql
+select
+ run_ts,
+ from_unixtime(from_ts) as ingest_from,
+ from_unixtime(to_ts) as ingest_to,  
+ row_count as total_process
+from
+ flights_batch_offset;
+```
+There should be one row of the previous ingest
+| run_ts | ingest_from | ingest_to     | total_process |
+| :------------- | :------------- |:------------- |:------------- |
+| 2023-05-22 12:45:50.832883 | 2023-05-22 10:14:00   | 	2023-05-22 12:38:00 | 	4020 |
+
+Let run a SQL query for a tumbling window:
+```sql
+with tumbling_window as (
+ SELECT
+  from_unixtime(
+   floor(
+    unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' ))
+     / (15 * 60)) * (15 * 60)) AS window_start,
+  from_unixtime(floor(unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )) / (15 * 60)) * (15 * 60) + (15 * 60)) AS window_end,
+  COUNT(*) AS count
+ FROM
+  flights_final
+ GROUP BY
+  floor(unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )) / (15 * 60))
+)
+select * from tumbling_window
+order by 1;
+```
+
+The output should like this for every 15 minutes window
+
+| window_start    | window_end    | count |
+| :------------- | :------------- |:-------------
+| 2023-05-22 10:00:00 |	2023-05-22 10:15:00	| 29 |
+| 2023-05-22 10:15:00 |	2023-05-22 10:30:00	| 405 |
+| 2023-05-22 10:30:00	| 2023-05-22 10:45:00	| 423 |
 
 Next create a data mart table:
 
