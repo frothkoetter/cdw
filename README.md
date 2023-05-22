@@ -723,44 +723,48 @@ create temporary table flights_streaming__tmp
  temp decimal, pressure decimal,humidity decimal,wind_speed decimal, clouds string);
 ```
 
-Now we populate the temporary table with the raw  streaming events:
+Now we populate the temporary table with the raw streaming events:
 ```sql
 with flights as ( select
-   year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum,
-   actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, cast( distance as integer ) as distance, taxiin, taxiout,
-   cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay,
-   origin_lon, origin_lat, cast( dest_lon as float) as dest_lon, cast(dest_lat as float) as dest_lat,
-   cast( translate( substr(prediction, instr(prediction,'prediction=')+11,1 ),'}','') as integer),
-   cast( translate( substr(prediction, instr(prediction,'proba=')+6,4 ),'}','') as float),
-   cast( translate( substr(prediction, instr(prediction,'prediction_delay=')+17,2 ),',','') as integer) ,
-   cast( translate( substr( weather_json, instr(weather_json,'temp=')+5,5 ),',','') as float) ,
-   cast( translate( substr( weather_json, instr(weather_json,'pressure=')+9,6 ),',','') as float) ,
-   cast( translate( substr( weather_json, instr(weather_json,'humidity=')+9,2 ),',','') as float) ,
-   cast( translate( substr( weather_json, instr(weather_json,'speed=')+6,5 ),',','') as float) ,
-   cast( translate( substr( weather_json, instr(weather_json,'all=')+4,3 ),'}','') as float)
-  from
-   flights_streaming_ice
-   )
+  year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum,
+  actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, cast( distance as integer ) as distance, taxiin, taxiout,
+  cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay,
+  origin_lon, origin_lat, cast( dest_lon as float) as dest_lon, cast(dest_lat as float) as dest_lat,
+  cast( translate( substr(prediction, instr(prediction,'prediction=')+11,1 ),'}','') as integer),
+  cast( translate( substr(prediction, instr(prediction,'proba=')+6,4 ),'}','') as float),
+  cast( translate( substr(prediction, instr(prediction,'prediction_delay=')+17,2 ),',','') as integer) ,
+  cast( translate( substr( weather_json, instr(weather_json,'temp=')+5,5 ),',','') as float) ,
+  cast( translate( substr( weather_json, instr(weather_json,'pressure=')+9,6 ),',','') as float) ,
+  cast( translate( substr( weather_json, instr(weather_json,'humidity=')+9,2 ),',','') as float) ,
+  cast( translate( substr( weather_json, instr(weather_json,'speed=')+6,5 ),',','') as float) ,
+  cast( translate( substr( weather_json, instr(weather_json,'all=')+4,3 ),'}','') as float)
+ from
+  flights_streaming_ice
+  ),
+offset as ( select max(to_ts) as max_ts from flights_batch_offset)
 insert into flights_streaming__tmp
-   select
-     *
-   from
-    flights;
+  select
+    flights.*
+  from
+   flights, offset
+   where  
+     unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
+       substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )) > nvl(max_ts,0);
 ```
 
-Now you create a new batch_id and save meta data about the batch content into the offset table:
+Now you maintain the offset and create a new batch_id and meta data about the batch content into the offset table:
 
 ```SQL
 insert into flights_batch_offset(run_ts,from_ts,to_ts,row_count)
- select
-     current_timestamp(),
-     max( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
-       substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' ))),
-     min( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
-       substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' ))),
-     count(1)
+select
+ current_timestamp(),
+ min( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
+   substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' ))),
+ max( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
+   substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' ))),
+ count(1)
 from
- flights_streaming__tmp;
+flights_streaming__tmp;
 ```
 
 And finally the data is swept into the new table:
@@ -780,6 +784,8 @@ Clean up;
 ```SQL
 drop table if exists flights_streaming__tmp;
 ```
+
+
 Next create a data mart table:
 
 ```sql
