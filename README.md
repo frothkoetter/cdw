@@ -780,7 +780,7 @@ from
  row_ingest r,
  offset b;
 ```
-Clean up;
+Clean up as good housekeeping is;
 ```SQL
 drop table if exists flights_streaming__tmp;
 ```
@@ -816,16 +816,15 @@ with tumbling_window as (
   floor(unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )) / (15 * 60))
 )
 select * from tumbling_window
-order by 1;
+order by 1 desc;
 ```
 
 The output should like this for every 15 minutes window
 
 | window_start    | window_end    | count |
 | :------------- | :------------- |:-------------
-| 2023-05-22 10:00:00 |	2023-05-22 10:15:00	| 29 |
-| 2023-05-22 10:15:00 |	2023-05-22 10:30:00	| 405 |
 | 2023-05-22 10:30:00	| 2023-05-22 10:45:00	| 423 |
+| 2023-05-22 10:15:00 |	2023-05-22 10:30:00	| 405 |
 (more rows ... )
 
 ### Optinal step - Data Marts
