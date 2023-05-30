@@ -669,11 +669,10 @@ During the workshop every minute new streaming flight events are
 ![](images/image025.png)
 
 The steps in this optional lab are as follows:
- 1) Create new flights final table, a offset table and a temporary table
- 2) Populate and transform the data from the raw streaming table into the temporary table
- 3) Sweep transformed data and save meta data of the micro batch
- 4) Create a data mart with automatic refresh
- 5) Run a BI query
+ - Create flights_final table, a offset table and a temporary table
+ - Populate and transform the data from the raw streaming table into the temporary table
+ - Sweep transformed data and save meta data of the micro batch in the offset table
+
 
 Create the table of the final streaming events:
 
@@ -705,6 +704,7 @@ create table flights_batch_offset(
  to_ts bigint,
  row_count bigint);
 ```
+Note: the Default surrogate_key() creates new unique number when new rows inserted
 
 Next is to create a temporary table of the new format (including prediction and weather)
 ```sql
@@ -723,7 +723,7 @@ create temporary table flights_streaming__tmp
  temp decimal, pressure decimal,humidity decimal,wind_speed decimal, clouds string);
 ```
 
-Now we populate the temporary table with the raw streaming events:
+Now we populate the temporary table with new events from the raw streaming:
 ```sql
 with flights as ( select
   year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum,
@@ -752,7 +752,7 @@ insert into flights_streaming__tmp
        substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )) > nvl(max_ts,0);
 ```
 
-Now you maintain the offset and create a new batch_id and meta data about the batch content into the offset table:
+Maintain the offset and create a new batch_id and meta data about the batch content into the offset table:
 
 ```SQL
 insert into flights_batch_offset(run_ts,from_ts,to_ts,row_count)
@@ -767,7 +767,7 @@ from
 flights_streaming__tmp;
 ```
 
-And finally the data is swept into the new table:
+Finally swept events into the flights_final table:
 
 ```SQL
 with row_ingest as ( select * from flights_streaming__tmp),
