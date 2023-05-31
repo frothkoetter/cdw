@@ -534,29 +534,29 @@ stored by
 
 insert into flights_ice  
 select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year  
-from flights_orc where year = 1995;
+from flights_orc where year = 1995 and month <= 6;
 
 insert into flights_ice  
 select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year
-from flights_orc where year not in (1995);
+from flights_orc where year = 1995 and month > 6;
 ```
 
-Now all rows inserted into the table flights_ice.
+Now all rows for one year inserted into the table flights_ice.
 
-Check the count of rows
+Check the count of all rows inserted previouly:
 
 ```sql
 select
- count(*)
+ count(*) row_count
 from
  flights_ice;
 ```
 
-Result: 86 mil rows.
+Result:
 
-| _c0 |
+| row_count |
 | :- |
-| 86289323 |
+| 5327435 |
 
 Now select the snapshot history of the table.
 
@@ -580,7 +580,7 @@ Pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace ***SNA
 ```sql
 select
  year,
- count(*)
+ count(*) as row_count
 from
  flights_ice
 FOR
@@ -593,9 +593,9 @@ order by
 
 Result: Only data from the first insert.
 
-| _c0 |
-| :- |
-| 5327435 |
+| year | row_count |
+| :- |:- |
+| 1995 | 2673586 |
 
 
 Partition Evolution is a feature when table layout can be updated as data or queries change and  users are not required to maintain partition columns.
