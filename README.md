@@ -517,27 +517,23 @@ Lets create a new table with Iceberg format and insert rows in batches:
 
 ```sql
 drop table if exists flights_ice;
-
 create table flights_ice(
- month int, dayofmonth int,  
+ year int, month int, dayofmonth int,  
  dayofweek int, deptime int, crsdeptime int, arrtime int,  
  crsarrtime int, uniquecarrier string, flightnum int, tailnum string,  
  actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int,  
  depdelay int, origin string, dest string, distance int, taxiin int,  
  taxiout int, cancelled int, cancellationcode string, diverted string,  
  carrierdelay int, weatherdelay int, nasdelay int, securitydelay int,  
- lateaircraftdelay int)  
-partitioned by
- (year int)  
-stored by
- ICEBERG;
+ lateaircraftdelay int )
+ stored by ICEBERG;
 
-insert into flights_ice  
-select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year  
+insert into flights_ice (year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay,origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay,nasdelay, securitydelay, lateaircraftdelay )
+select year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay
 from flights_orc where year = 1995 and month <= 6;
 
-insert into flights_ice  
-select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay, year
+insert into flights_ice (year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay,origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay,nasdelay, securitydelay, lateaircraftdelay )
+select year,month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay
 from flights_orc where year = 1995 and month > 6;
 ```
 
@@ -579,7 +575,6 @@ Pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace ***SNA
 
 ```sql
 select
- year,
  count(*) as row_count
 from
  flights_ice
@@ -593,9 +588,9 @@ order by
 
 Result: Only data from the first insert.
 
-| year | row_count |
-| :- |:- |
-| 1995 | 2673586 |
+|  row_count |
+| :- |
+| 2673586 |
 
 
 Partition Evolution is a feature when table layout can be updated as data or queries change and  users are not required to maintain partition columns.
@@ -604,58 +599,43 @@ Partition Evolution is a feature when table layout can be updated as data or que
 
 With Iceberg’s hidden partitions the tables separation between physical and logical users avoid reading unnecessary partitions and don’t need to know how the table is partitioned and add extra filters to their queries.
 
-Lets change the partition and add YEAR & MONTH and insert data for another year:
+Lets change the partition schema to YEAR & MONTH & DAYOFMONTH
 
 ```sql
-alter table flights_ice SET PARTITION SPEC (year,month);
+alter table flights_ice SET PARTITION SPEC (year ,month, dayofmonth);
+```
 
-insert into flights_ice  
-select month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,  
-uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay,  
-origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay,
-nasdelay, securitydelay, lateaircraftdelay, 2022
-from flights_orc where year = 1995;
+Now let's insert one day of data into the partitioned table:
+```sql
+insert into flights_ice (year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay,origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay,nasdelay, securitydelay, lateaircraftdelay )
+select 2023, 1, 1 , dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay
+from flights_orc where year = 1995 and month = 1 and dayofmonth = 1;
 ```
 Now lets see the impact what the difference is, lets run two queries and note the complete time:
 
-Count the records for one year and month:
+Count the records for one year and month that is inserted before the partition:
 ```sql
 select
-  year,
-  month,
-  count(1)
+  count(1) as row_count,
+  sum(depdelay)
 from
   flights_ice
 where  
-  year = 1995 and month = 1
-group by
-  year,
-  month;
+  year = 1995 and month = 1 and dayofmonth = 1
 ```
 
-In Hue you can find the runtime at the end of the output:
-
-INFO  : Completed executing command(queryId=hive_20220427111723_1f126db0-84aa-4df6-b0a1-065a4f9001e4); Time taken: 3.966 seconds
-
-The above query has read the full year data of the partition year=1995.
-
+Run the second query for the data last inserted into the partition:
 ```sql
 select
-  year,
-  month,
-  count(1)
+count(1) as row_count,
+sum(depdelay)
 from
   flights_ice
 where  
-  year = 2022 and month = 1
-group by
-  year,
-  month;
+  year = 2022 and month = 1 and dayofmonth = 1
  ```
 
-INFO  : Completed executing command(queryId=hive_20220427111723_1f126db0-84aa-4df6-b0a1-065a4f9001e4); Time taken: 0.466 seconds
-
-The second query has read only the month of the partition year=2022 and month=1.
+You can compare the two queries in the Job Query The second query has reads only the small partitioned file
 
 This example shows that the execution time is greatly decreased because less data was read.
 
