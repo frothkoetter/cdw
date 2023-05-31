@@ -635,10 +635,13 @@ where
   year = 2023 and month = 1 and dayofmonth = 1
  ```
 
-You can compare the two queries in the Job Query The second query has reads only the small partitioned file
-![](images/image0251.png)
-More details on the DAG Counter tab:
+You can compare the two queries in the Job Query tool. The second query has reads only the small partitioned file and you notice the difference in the DAG Swimlane tab:
+
 ![](images/image0252.png)
+
+More details on the DAG Counter tab:
+
+![](images/image0251.png)
 Note: check on Hide Equal Values to see only changed values
 
 This example shows that the execution time is greatly decreased because less data was read.
