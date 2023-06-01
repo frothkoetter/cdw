@@ -47,8 +47,8 @@ from random import randint  # PEadaptation
 
 args = {"feature" : "US,DCA,BOS,1,16"}
 
-ct = load("cml/prebuild-models/ct.joblib")
-pipe = load("cml/prebuild-models/pipe.joblib")
+ct = load("/home/cdsw/cml/prebuilt-models/ct.joblib")
+pipe = load("/home/cdsw/cml/prebuilt-models/pipe.joblib")
 
 
 @cdsw.model_metrics
