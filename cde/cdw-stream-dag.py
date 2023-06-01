@@ -149,8 +149,6 @@ cdw_transform = CDWOperator(
 
 )
 
-wait = DummyOperator(task_id='wait', dag=dag)
-
 cdw_offset = CDWOperator(
     task_id='cdw-offset',
     dag=dag,
