@@ -1228,12 +1228,9 @@ show compactions;
 ```
 
 Results
-
-| :------------- | :----- | :------ | :------ | :----- | :----- | :----- | :----- | :----- | :----- | :------ | : ------ | :----- |
+| :- | :- | :- | :- | :- | :- | :- | :-| :- | :- | :- | :- | :- |
 | compactionid	| dbname | tabname | partname | type | state | workerhost | workerid | enqueuetime | starttime | duration | hadoopjobid | errormessage |
-| :------------- | :----- | :------ | :------ | :----- | :----- | :----- | :----- | :----- | :----- | :------ | : ------ | :----- |
 | 1 |	airlinedata_ws	| flights	| month=2 | MAJOR | succeeded | yjnam-yakurut-oozie-master0.se-sandb.a465-9q4k.cloudera.site | 66 | 1666787018950 | 1666787023591 | 62 | None | jk.svc.cluster.local |
-| :------------- | :----- | :------ | :------ | :----- | :----- | :----- | :----- | :----- | :----- | :------ | : ------ | :----- |
 
 When the compaction is completed you can lookup the numFiles and find the reduced number.
 
