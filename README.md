@@ -646,273 +646,6 @@ Note: check on Hide Equal Values to see only changed values
 
 This example shows that the execution time is greatly decreased because less data was read.
 
-### Optinal step - Continues Data Pipeline
-
-During the workshop every minute new streaming flight events are
- - created
- - enriched with realtime weather information and with the prediction of the delay
- - stored in Iceberg table
-
-![](images/image025.png)
-
-The steps in this optional lab are as follows:
- - Create flights_final table, a offset table and a temporary table
- - Populate and transform the data from the raw streaming table into the temporary table
- - Sweep transformed data and save meta data of the micro batch in the offset table
-
-
-Create the table of the final streaming events:
-
-```sql
-drop table if exists flights_final;
-create table flights_final
-(
- year int, month int, dayofmonth int,
- dayofweek int, deptime int, crsdeptime int, arrtime int,
- crsarrtime int, uniquecarrier string, flightnum int, tailnum string,
- actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int,
- depdelay int, origin string, dest string, distance int, taxiin int,
- taxiout int, cancelled int, cancellationcode string, diverted string,
- carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, lateaircraftdelay int,
- origin_lon string,origin_lat string, dest_lon string,dest_lat string,
- prediction decimal,proba  decimal,prediction_delay  decimal,
- temp decimal, pressure decimal,humidity decimal,wind_speed decimal, clouds string,
- batch_id BIGINT )
-stored by ICEBERG;
-```
-
-Create a table for the meta data of the micro batch, as batch_id, offset pointer and row count of the events processed:
-
-```sql
-drop table if exists flights_batch_offset;
-create table flights_batch_offset(
- batch_id bigint DEFAULT SURROGATE_KEY(), run_ts timestamp,
- from_ts bigint,
- to_ts bigint,
- row_count bigint);
-```
-Note: the Default surrogate_key() creates new unique number when new rows inserted
-
-Next is to create a temporary table of the new format (including prediction and weather)
-```sql
-drop table if exists flights_streaming__tmp;
-create temporary table flights_streaming__tmp
-(
- year int, month int, dayofmonth int,
- dayofweek int, deptime int, crsdeptime int, arrtime int,
- crsarrtime int, uniquecarrier string, flightnum int, tailnum string,
- actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int,
- depdelay int, origin string, dest string, distance int, taxiin int,
- taxiout int, cancelled int, cancellationcode string, diverted string,
- carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, lateaircraftdelay int,
- origin_lon string,origin_lat string, dest_lon string,dest_lat string,
- prediction decimal,proba  decimal,prediction_delay  decimal,
- temp decimal, pressure decimal,humidity decimal,wind_speed decimal, clouds string);
-```
-
-Now we populate the temporary table with new events from the raw streaming:
-```sql
-with flights as ( select
-  year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum,
-  actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, cast( distance as integer ) as distance, taxiin, taxiout,
-  cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay,
-  origin_lon, origin_lat, cast( dest_lon as float) as dest_lon, cast(dest_lat as float) as dest_lat,
-  cast( translate( substr(prediction, instr(prediction,'prediction=')+11,1 ),'}','') as integer),
-  cast( translate( substr(prediction, instr(prediction,'proba=')+6,4 ),'}','') as float),
-  cast( translate( substr(prediction, instr(prediction,'prediction_delay=')+17,2 ),',','') as integer) ,
-  cast( translate( substr( weather_json, instr(weather_json,'temp=')+5,5 ),',','') as float) ,
-  cast( translate( substr( weather_json, instr(weather_json,'pressure=')+9,6 ),',','') as float) ,
-  cast( translate( substr( weather_json, instr(weather_json,'humidity=')+9,2 ),',','') as float) ,
-  cast( translate( substr( weather_json, instr(weather_json,'speed=')+6,5 ),',','') as float) ,
-  cast( translate( substr( weather_json, instr(weather_json,'all=')+4,3 ),'}','') as string)
- from
-  airlinedata.flights_streaming_ice
-  ),
-offset as ( select max(to_ts) as max_ts from flights_batch_offset)
-insert into flights_streaming__tmp
-  select
-    flights.*
-  from
-   flights, offset
-   where  
-     unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
-       substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )) > nvl(max_ts,0);
-```
-
-Maintain the offset and create a new batch_id and meta data about the batch content into the offset table:
-
-```SQL
-insert into flights_batch_offset(run_ts,from_ts,to_ts,row_count)
-select
- current_timestamp(),
- min( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
-   substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' ))),
- max( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
-   substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' ))),
- count(1)
-from
-flights_streaming__tmp;
-```
-
-Finally swept events into the flights_final table:
-
-```SQL
-with row_ingest as ( select * from flights_streaming__tmp),
-     offset as ( select max(batch_id) from flights_batch_offset)
-insert into flights_final
-select
- r.*,
- b.*
-from
- row_ingest r,
- offset b;
-```
-Clean up as good housekeeping is;
-```SQL
-drop table if exists flights_streaming__tmp;
-```
-
-Lets run two checks, checking the offset table
-```sql
-select
- run_ts,
- from_unixtime(from_ts) as ingest_from,
- from_unixtime(to_ts) as ingest_to,  
- row_count as total_process
-from
- flights_batch_offset;
-```
-There should be one row of the previous ingest
-| run_ts | ingest_from | ingest_to     | total_process |
-| :------------- | :------------- |:------------- |:------------- |
-| 2023-05-22 12:45:50.832883 | 2023-05-22 10:14:00   | 	2023-05-22 12:38:00 | 	4020 |
-
-Let run a SQL query for a tumbling window:
-```sql
-with tumbling_window as (
- SELECT
-  from_unixtime(
-   floor(
-    unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' ))
-     / (15 * 60)) * (15 * 60)) AS window_start,
-  from_unixtime(floor(unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )) / (15 * 60)) * (15 * 60) + (15 * 60)) AS window_end,
-  COUNT(*) AS count
- FROM
-  flights_final
- GROUP BY
-  floor(unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )) / (15 * 60))
-)
-select * from tumbling_window
-order by 1 desc;
-```
-
-The output should like this for every 15 minutes window
-
-| window_start    | window_end    | count |
-| :------------- | :------------- |:-------------
-| 2023-05-22 10:30:00	| 2023-05-22 10:45:00	| 423 |
-| 2023-05-22 10:15:00 |	2023-05-22 10:30:00	| 405 |
-(more rows ... )
-
-### Optinal step - Data Marts
-
-```sql
-drop table if exists airport_delayed_flights;
-create table airport_delayed_flights (
- daytime string,
- dest_airport_iata string,
- dest_city  string,
- dest_temp  decimal,
- dest_wind_speed decimal,
- dest_pressure  decimal,
- predicted_delayed int,
- predicted_delay_min int);
- ```
-
-Create a job with the query scheduler to run the query every 15 minute:
-
-```sql
--- drop scheduled query airport_delayed_flights;
-create scheduled query airport_delayed_flights cron '0 */15 * * * ? *' defined as
-insert overwrite airlinedata.airport_delayed_flights
-SELECT
-  date_format( from_unixtime( ( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
-        substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )))) , 'yyyy/MM/dd HH:00:00'),
-   flights.dest as destination_airport,
-   airports.city as destination_city,
-    max(flights.temp) as dest_temp,
-    max(flights.wind_speed) as dest_wind_speed,
-    max(flights.pressure) as dest_pressure,
-    sum(flights.prediction) AS predicted_delayed,
-    sum(flights.prediction_delay) AS predicted_delay_min
-FROM
-   airlinedata.flights_final flights,
-   airlinedata.airports_orc airports
-WHERE
-    flights.dest = airports.iata
-GROUP BY
-   date_format( from_unixtime( ( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
-        substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )))) , 'yyyy/MM/dd HH:00:00'),
-   flights.dest ,
-   airports.city ;
-```
-
-Lets enable and check that the job is created:
-```sql
-alter scheduled query airport_delayed_flights enable;
-select
-  schedule_name,
-  enabled,
-  next_execution,
-  query  
-from
-  information_schema.scheduled_queries
-where
-  `user` = current_user();
-```
-The query output should be like this:
-
-|schedule_name	|enabled	|next_execution	|query |
-| :- | :- | :- | :- |
-|airport_delayed_flights | true | 2023-05-15 17:55:00 | insert overwrite airlinedata.airport_delayed_flights SELECT  .... |
-
-Next step is activated job to kick off executions, check the status:
-```sql
-alter scheduled query airport_delayed_flights execute;
-with job_runs as (select
- schedule_name,
- state,
- start_time,
- elapsed
-from
-  information_schema.scheduled_executions )
-select
- job_runs.*
-from
-  information_schema.scheduled_queries jobs
-join job_runs
-  on
-   `user` = current_user()
-  and
-   jobs.schedule_name = job_runs.schedule_name;
-  ```
-You see the job finished status:
-
-|job_runs.schedule_name	|job_runs.state	|job_runs.start_time	|job_runs.elapsed|
-| :- | :- | :- | :- |
-|airport_delayed_flights | FINISHED | 2023-05-15 17:48:06 | 3 |
-
-
-Check that rows for Boston airport in the data mart:
-```sql
-select  
- *
-from
- airport_delayed_flights
-where
- dest_airport_iata = 'BOS'
-order by 1 desc;
-```
 
 ------
 ## Lab 6 - Slowly Changing Dimensions (SCD) - TYPE 2
@@ -1137,10 +870,287 @@ In the Ranger UI, select the “Audit” menu and limit the amount of data displ
 
 ||
 | :- |
+# Bonus Material (optional)
 
+## 9 - Continues Data Pipeline
+
+During the workshop every minute new streaming flight events are
+ - created
+ - enriched with realtime weather information and with the prediction of the delay
+ - stored in Iceberg table
+
+![](images/image025.png)
+
+The steps in this optional lab are as follows:
+ - Create flights_final table, a offset table and a temporary table
+ - Populate and transform the data from the raw streaming table into the temporary table
+ - Sweep transformed data and save meta data of the micro batch in the offset table
+
+
+Create the table of the final streaming events with additional columns for weather information and delay prediction:
+
+```sql
+drop table if exists flights_final;
+create table flights_final
+(
+ year int, month int, dayofmonth int,
+ dayofweek int, deptime int, crsdeptime int, arrtime int,
+ crsarrtime int, uniquecarrier string, flightnum int, tailnum string,
+ actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int,
+ depdelay int, origin string, dest string, distance int, taxiin int,
+ taxiout int, cancelled int, cancellationcode string, diverted string,
+ carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, lateaircraftdelay int,
+ origin_lon string,origin_lat string, dest_lon string,dest_lat string,
+ prediction decimal,proba  decimal,prediction_delay  decimal,
+ temp decimal, pressure decimal,humidity decimal,wind_speed decimal, clouds string,
+ batch_id BIGINT )
+stored by ICEBERG;
+```
+
+Create a table for the meta data of the micro batch, as batch_id, offset pointer and row count of the events processed:
+
+```sql
+drop table if exists flights_batch_offset;
+create table flights_batch_offset(
+ batch_id bigint DEFAULT SURROGATE_KEY(), run_ts timestamp,
+ from_ts bigint,
+ to_ts bigint,
+ row_count bigint);
+```
+Note: the Default surrogate_key() creates new unique number when new rows inserted
+
+Next is to create a temporary table of the new format (including prediction and weather)
+```sql
+drop table if exists flights_streaming__tmp;
+create temporary table flights_streaming__tmp
+(
+ year int, month int, dayofmonth int,
+ dayofweek int, deptime int, crsdeptime int, arrtime int,
+ crsarrtime int, uniquecarrier string, flightnum int, tailnum string,
+ actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int,
+ depdelay int, origin string, dest string, distance int, taxiin int,
+ taxiout int, cancelled int, cancellationcode string, diverted string,
+ carrierdelay int, weatherdelay int, nasdelay int, securitydelay int, lateaircraftdelay int,
+ origin_lon string,origin_lat string, dest_lon string,dest_lat string,
+ prediction decimal,proba  decimal,prediction_delay  decimal,
+ temp decimal, pressure decimal,humidity decimal,wind_speed decimal, clouds string);
+```
+
+Now we populate the temporary table with new events from the raw streaming:
+```sql
+with flights as ( select
+  year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum,
+  actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, cast( distance as integer ) as distance, taxiin, taxiout,
+  cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay,
+  origin_lon, origin_lat, cast( dest_lon as float) as dest_lon, cast(dest_lat as float) as dest_lat,
+  cast( translate( substr(prediction, instr(prediction,'prediction=')+11,1 ),'}','') as integer),
+  cast( translate( substr(prediction, instr(prediction,'proba=')+6,4 ),'}','') as float),
+  cast( translate( substr(prediction, instr(prediction,'prediction_delay=')+17,2 ),',','') as integer) ,
+  cast( translate( substr( weather_json, instr(weather_json,'temp=')+5,5 ),',','') as float) ,
+  cast( translate( substr( weather_json, instr(weather_json,'pressure=')+9,6 ),',','') as float) ,
+  cast( translate( substr( weather_json, instr(weather_json,'humidity=')+9,2 ),',','') as float) ,
+  cast( translate( substr( weather_json, instr(weather_json,'speed=')+6,5 ),',','') as float) ,
+  cast( translate( substr( weather_json, instr(weather_json,'all=')+4,3 ),'}','') as string)
+ from
+  airlinedata.flights_streaming_ice
+  ),
+offset as ( select max(to_ts) as max_ts from flights_batch_offset)
+insert into flights_streaming__tmp
+  select
+    flights.*
+  from
+   flights, offset
+   where  
+     unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
+       substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )) > nvl(max_ts,0);
+```
+
+Maintain the offset and create a new batch_id and meta data about the batch content into the offset table:
+
+```SQL
+insert into flights_batch_offset(run_ts,from_ts,to_ts,row_count)
+select
+ current_timestamp(),
+ min( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
+   substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' ))),
+ max( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
+   substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' ))),
+ count(1)
+from
+flights_streaming__tmp;
+```
+
+Finally swept events into the flights_final table:
+
+```SQL
+with ingest as ( select * from flights_streaming__tmp),
+     offset as ( select max(batch_id) from flights_batch_offset)
+insert into flights_final
+select
+ i.*,
+ b.*
+from
+ ingest r,
+ offset b;
+```
+Clean up as good housekeeping is;
+```SQL
+drop table if exists flights_streaming__tmp;
+```
+
+Lets run two checks, checking the offset table
+```sql
+select
+ run_ts,
+ from_unixtime(from_ts) as ingest_from,
+ from_unixtime(to_ts) as ingest_to,  
+ row_count as total_process
+from
+ flights_batch_offset;
+```
+There should be one row of the previous ingest
+| run_ts | ingest_from | ingest_to     | total_process |
+| :------------- | :------------- |:------------- |:------------- |
+| 2023-05-22 12:45:50.832883 | 2023-05-22 10:14:00   | 	2023-05-22 12:38:00 | 	4020 |
+
+Let's run a SQL query of a 15 minutes tumbling window:
+```sql
+with tumbling_window as (
+ SELECT
+  from_unixtime(
+   floor(
+    unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' ))
+     / (15 * 60)) * (15 * 60)) AS window_start,
+  from_unixtime(floor(unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )) / (15 * 60)) * (15 * 60) + (15 * 60)) AS window_end,
+  COUNT(*) AS count
+ FROM
+  flights_final
+ GROUP BY
+  floor(unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )) / (15 * 60))
+)
+select * from tumbling_window
+order by 1 desc;
+```
+
+The output should like this for every 15 minutes window
+
+| window_start    | window_end    | count |
+| :------------- | :------------- |:-------------
+| 2023-05-22 10:30:00	| 2023-05-22 10:45:00	| 423 |
+| 2023-05-22 10:15:00 |	2023-05-22 10:30:00	| 405 |
+(more rows ... )
+
+## 10 Data Mart / Cubes
+
+In earlier Above examples you had two dimensions with origin and dest, now you add a third dimension with the time i.e. year. The data set you start to analyze has become a real cube with three dimensions as here airlinedata as multi dimension cube.
+
+
+![](images/image0271.png)
+
+
+Lets define the table for the cube:
+
+```sql
+drop table if exists airport_delayed_flights;
+create table airport_delayed_flights (
+ daytime string,
+ dest_airport_iata string,
+ dest_city  string,
+ dest_temp  decimal,
+ dest_wind_speed decimal,
+ dest_pressure  decimal,
+ predicted_delayed int,
+ predicted_delay_min int);
+ ```
+
+Create a job with the query scheduler to run the query every 15 minute:
+
+```sql
+-- drop scheduled query airport_delayed_flights;
+create scheduled query airport_delayed_flights cron '0 */15 * * * ? *' defined as
+insert overwrite airlinedata.airport_delayed_flights
+SELECT
+  date_format( from_unixtime( ( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
+        substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )))) , 'yyyy/MM/dd HH:00:00'),
+   flights.dest as destination_airport,
+   airports.city as destination_city,
+    max(flights.temp) as dest_temp,
+    max(flights.wind_speed) as dest_wind_speed,
+    max(flights.pressure) as dest_pressure,
+    sum(flights.prediction) AS predicted_delayed,
+    sum(flights.prediction_delay) AS predicted_delay_min
+FROM
+   airlinedata.flights_final flights,
+   airlinedata.airports_orc airports
+WHERE
+    flights.dest = airports.iata
+GROUP BY
+   date_format( from_unixtime( ( unix_timestamp(concat( year,'-', month, '-', dayofmonth, ' ' ,
+        substring(lpad(deptime,4,'0'),1,2),':', substring(lpad(deptime,4,'0'),3,2) ,':00' )))) , 'yyyy/MM/dd HH:00:00'),
+   flights.dest ,
+   airports.city ;
+```
+
+Lets enable and check that the job is created:
+```sql
+alter scheduled query airport_delayed_flights enable;
+select
+  schedule_name,
+  enabled,
+  next_execution,
+  query  
+from
+  information_schema.scheduled_queries
+where
+  `user` = current_user();
+```
+The query output should be like this:
+
+|schedule_name	|enabled	|next_execution	|query |
+| :- | :- | :- | :- |
+|airport_delayed_flights | true | 2023-05-15 17:55:00 | insert overwrite airlinedata.airport_delayed_flights SELECT  .... |
+
+Next step is activated job to kick off executions, check the status:
+```sql
+alter scheduled query airport_delayed_flights execute;
+with job_runs as (select
+ schedule_name,
+ state,
+ start_time,
+ elapsed
+from
+  information_schema.scheduled_executions )
+select
+ job_runs.*
+from
+  information_schema.scheduled_queries jobs
+join job_runs
+  on
+   `user` = current_user()
+  and
+   jobs.schedule_name = job_runs.schedule_name;
+  ```
+You see the job finished status:
+
+|job_runs.schedule_name	|job_runs.state	|job_runs.start_time	|job_runs.elapsed|
+| :- | :- | :- | :- |
+|airport_delayed_flights | FINISHED | 2023-05-15 17:48:06 | 3 |
+
+
+Check that rows for Boston airport in the data mart:
+```sql
+select  
+ *
+from
+ airport_delayed_flights
+where
+ dest_airport_iata = 'BOS'
+order by 1 desc;
+```
 
 -----
-## Bonus Material (optional)
+### Loadtest
+
 Run load test to simulate adding many more end users. Then view results of autoscaling. Discuss how autoscaling works, and how it allows for easy, cost-effective scaling.
 
 |-- Optional step. Can be just a discussion if no load test is actually done.|
