@@ -635,7 +635,7 @@ where
   year = 2023 and month = 1 and dayofmonth = 1
  ```
 
-You can compare the two queries in the Hive Query Processor tool. The second query has reads only the small partitioned file and you notice the difference in the DAG Swimlane tab:
+You can compare the two queries in the HUE Query Processor tool. The second query has reads only the small partitioned file and you notice the difference in the DAG Swimlane tab:
 
 ![](images/image0252.png)
 
