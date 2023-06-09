@@ -987,11 +987,11 @@ with ingest as ( select * from flights_streaming__tmp),
      offset as ( select max(batch_id) from flights_batch_offset)
 insert into flights_final
 select
- i.*,
- b.*
+ ingest.*,
+ offset.*
 from
- ingest r,
- offset b;
+ ingest,
+ offset;
 ```
 Clean up as good housekeeping is;
 ```SQL
