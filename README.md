@@ -621,7 +621,7 @@ select
 from
   flights_ice
 where  
-  year = 1995 and month = 1 and dayofmonth = 1
+  year = 1995 and month = 1 and dayofmonth = 1;
 ```
 
 Run the second query for the data last inserted into the partition:
@@ -632,7 +632,7 @@ sum(depdelay)
 from
   flights_ice
 where  
-  year = 2023 and month = 1 and dayofmonth = 1
+  year = 2023 and month = 1 and dayofmonth = 1;
  ```
 
 You can compare the two queries in the HUE Query Processor tool. The second query has reads only the small partitioned file and you notice the difference in the DAG Swimlane tab:
