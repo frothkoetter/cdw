@@ -826,8 +826,11 @@ We can actually check this easily by using the lineage graph to navigate to a do
 
 This will give us the metadata for the “age” column in a derived table. Note the information on “Propagated Classifications”:
    ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.013.png)
+
 Try to query all columns from the “emp\_all” table again in HUE – by simply executing the last query again.
-Why did we get an error now? There exists a policy in Ranger that denies all members of the hands-on lab group access to Hive data that is classified as “PII”. Let’s check that out. Like before for Atlas, open the Ranger UI via the triple-dot menu in you warehouse’s Database Catalog: ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.014.png)
+Why did we get an error now? There exists a policy in Ranger that denies all members of the hands-on lab group access to Hive data that is classified as “PII”. Let’s check that out.
+
+Like before for Atlas, open the Ranger UI via the triple-dot menu in you warehouse’s Database Catalog: ![](images/RangerUIOpen.png)
 
 In the Ranger UI, select the “Audit” menu and limit the amount of data displayed by specifying the filter expressions:
    Result: Denied
