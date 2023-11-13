@@ -16,7 +16,7 @@ default_args = {
 }
 
 dag = DAG(
-    'cdw-stream-dag', default_args=default_args, catchup=False, schedule_interval="*/15 * * * *", is_paused_upon_creation=False)
+    'cdw-stream-dag', default_args=default_args, catchup=False, schedule_interval="*/20 * * * *", is_paused_upon_creation=False)
 
 vw_airlinedata_init = """
 create table if not exists flights_final

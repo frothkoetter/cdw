@@ -783,9 +783,9 @@ select * from emp_all;
 
 … should give the contents of the emp\_all table, which only has a couple of lines of data.
 
-For the next step we will switch to the UI of Atlas, the CDP component responsible for metadata management and governance: in the Cloudera Data Warehouse *Overview* UI, select your Virtual Warehouse to highlight the associated Database Catalog. Click on the three-dot menu of this DB catalog and select “Open Atlas” in the associated pop-up menu:
+For the next step we will switch to the UI of Atlas, the CDP component responsible for metadata management and governance: in the Cloudera Data Warehouse *Overview* UI, select Database Catalog. Click on the three-dot menu of this DB catalog and select “Open Atlas” in the associated pop-up menu:
 
-![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.006.png)
+![](images/RangerUIOpen.png)
 
 This should open the Atlas UI. CDP comes with a newer, improved user interface which can be enabled through the __“Switch to Beta”__ item in the user menu on the upper right corner of the screen. Do this now.
 

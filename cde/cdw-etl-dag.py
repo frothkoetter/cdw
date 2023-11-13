@@ -19,6 +19,7 @@ dag = DAG(
     'cdw-etl-dag', default_args=default_args, catchup=False, schedule_interval="15 * * * *", is_paused_upon_creation=False)
 
 vw_airlinedata_cleanup = """
+CREATE DATABASE IF NOT EXISTS airlinedata_ws;
 DROP MATERIALIZED VIEW airlinedata_ws.traffic_cancel_airport;
 drop table if exists airlinedata_ws.airlines;
 drop table if exists airlinedata_ws.airports;
