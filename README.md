@@ -256,17 +256,17 @@ Result: column names with types, parameters and storage
 |dayofweek| int| |
 ...
 
-Scrol down to row 49
+Scrol down to row 46
 
-| | numFiles| 15 |
+| | numFiles| 14 |
 | :- | :- |:- |
-| | numPartitions| 15 |
+| | numPartitions| 14 |
 | | numRows| 8628933 |
 
  ```sql
 show partitions flights_orc;
  ```
-Result: showing all 15 partitions with keys
+Result: showing all 14 partitions with keys
 
 | partition |
 | :- |
@@ -274,7 +274,7 @@ Result: showing all 15 partitions with keys
 |year=1996|
 |year=1997|
 |...|
-|year=__HIVE_DEFAULT_PARTITION__|
+|year=2008|
 
 Experiment with different queries to see effects of the columnar storage format and cache.
 
