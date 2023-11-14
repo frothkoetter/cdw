@@ -261,7 +261,7 @@ Scrol down to row 46
 | | numFiles| 14 |
 | :- | :- |:- |
 | | numPartitions| 14 |
-| | numRows| 8628933 |
+| | numRows| 86399321  |
 
  ```sql
 show partitions flights_orc;
@@ -552,7 +552,7 @@ Result:
 
 | row_count |
 | :- |
-| 5327435 |
+| 5454913 |
 
 Now select the snapshot history of the table.
 
@@ -590,7 +590,7 @@ Result: Only data from the first insert.
 
 |  row_count |
 | :- |
-| 2673586 |
+| 2783584 |
 
 
 Partition Evolution is a feature when table layout can be updated as data or queries change and  users are not required to maintain partition columns.
