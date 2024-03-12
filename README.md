@@ -146,49 +146,23 @@ Results
 |N377UA	| 25105 |328546	| 12163	|
 
 
+A SQL AI Assistant has been integrated into Hue with the capability to leverage the power of Large Language Models (LLMs) for various SQL tasks. It helps you to create, edit, optimize, fix, and succinctly summarize queries using natural language and makes SQL development faster, easier, and less error-prone.
 
-QUERY: Find what engines in these airplanes causing the delays
+Click on the blue dot to launch the SQL AI Assistant
+![](images/cdw-lab1-ai001.png)
 
-DESCRIPTION: Ad Hoc Exploration
+this unfolds this bar
+![](images/cdw-lab1-ai002.png)
 
-```sql
-with aircrafts_delayed as (
-SELECT
-  tailnum ,
-  count(*) as flights_count,
-  sum( nvl(depdelay,0) ) AS departure_delay_minutes,
-  sum( case when nvl(depdelay,0) > 0 then 1 end) as departure_delay_count
-FROM
-  flights_csv
-GROUP BY
-  tailnum
-)
-select
-  p.engine_type as engine,
-  p.model as model,
-  sum( a.departure_delay_minutes ) as sum_departure_delay_minutes
-from
- planes_csv p,
- aircrafts_delayed a
-where
- a.tailnum = p.tailnum
-group by
- p.engine_type,
- p.model
-order by sum_departure_delay_minutes desc
-limit 5;
-```
+Click on EXPLAIN to understand SQL query command
 
-Results:
+![](images/cdw-lab1-ai003.png)
 
-|engine	|model|sum_departure_delay_minutes|
-| :- | :- | :- |
-|Turbo-Fan |CL-600-2B19| 30905586|
-| | | 30857153|
-|Turbo-Fan|EMB-145LR|20831992|
-|Turbo-Fan|DC9-82(MD-82)|20075023|
-|Turbo-Fan|MK-88|19482652|
+it will take a few secondes to generate this outcome.
 
+![](images/cdw-lab1-ai004.png)
+
+This can be inserted for documentation purposes.
 
 -----
 ## Lab 3 - Managed Tables
