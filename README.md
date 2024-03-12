@@ -145,13 +145,16 @@ Results
 |N366UA	| 24808 |331318	| 12113	|
 |N377UA	| 25105 |328546	| 12163	|
 
+### SQL AI Assistant  
 
 A SQL AI Assistant has been integrated into Hue with the capability to leverage the power of Large Language Models (LLMs) for various SQL tasks. It helps you to create, edit, optimize, fix, and succinctly summarize queries using natural language and makes SQL development faster, easier, and less error-prone.
 
 Click on the blue dot to launch the SQL AI Assistant
+
 ![](images/cdw-lab1-ai001.png)
 
 this unfolds this bar
+
 ![](images/cdw-lab1-ai002.png)
 
 Click on EXPLAIN to understand SQL query command
