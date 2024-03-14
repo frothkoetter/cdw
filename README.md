@@ -625,24 +625,24 @@ This example shows that the execution time is greatly decreased because less dat
 
 ## Lab 6 - Data Quality with Branching
 
-The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning.
+The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. It is imperative to conduct thorough testing, cleansing and validation of data at every stage of the data pipeline before deployment into the production.
 
-Consider an ETL operation tasked with extracting customer data from an operational database and transferring it to a data warehouse. What if the source data contains inconsistencies or duplicates, and these issues are not rectified before integration into the production environment?
+The QA pipeline looks like the following:
+![](images/cdw-lab6-qa001.png)
 
-Such discrepancies in the production data could significantly affect the accuracy of BI reports, potentially leading to erroneous insights and consequently impacting organizational decision-making. Hence, it is imperative to conduct thorough validation and auditing of data at every stage of the data pipeline before deployment into the production environment as shown in this lab.
+The QA steps are test, cleanse, validate and propergate to production.
 
-The QA pipeline are the following steps:
-
-
-We test, cleanse and validate the AIRPORTS table for:   
+In this lab we go through these steps for the AIRPORTS table.
 
 /**
+
 1) uniqueness of the IATA codes
 2) length of field IATA should be always 3
 3) no quotation marks in the field AIRPORT
+
 */
 
-Begin with the creation of Iseberg V2 table with the raw data and run the first test
+Begin with the creation of ICEBERG V2 table with the raw data and run the first test
 
 ```sql
 drop table if exists airports_ice;
