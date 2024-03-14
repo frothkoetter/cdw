@@ -634,13 +634,11 @@ The QA steps are test, cleanse, validate and propergate to production.
 
 In this lab we go through these steps for the AIRPORTS table.
 
-/**
 
-1) uniqueness of the IATA codes
-2) length of field IATA should be always 3
-3) no quotation marks in the field AIRPORT
+*1) uniqueness of the IATA codes
+*2) length of field IATA should be always 3
+*3) no quotation marks in the field AIRPORT
 
-*/
 
 Begin with the creation of ICEBERG V2 table with the raw data and run the first test
 
