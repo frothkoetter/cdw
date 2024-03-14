@@ -625,16 +625,22 @@ This example shows that the execution time is greatly decreased because less dat
 
 ## Lab 6 - Data Quality with Branching
 
-The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. Consider an ETL operation tasked with extracting customer data from an operational database and transferring it to a data warehouse. What if the source data contains inconsistencies or duplicates, and these issues are not rectified before integration into the production environment?
+The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning.
+
+Consider an ETL operation tasked with extracting customer data from an operational database and transferring it to a data warehouse. What if the source data contains inconsistencies or duplicates, and these issues are not rectified before integration into the production environment?
 
 Such discrepancies in the production data could significantly affect the accuracy of BI reports, potentially leading to erroneous insights and consequently impacting organizational decision-making. Hence, it is imperative to conduct thorough validation and auditing of data at every stage of the data pipeline before deployment into the production environment as shown in this lab.
 
+The QA pipeline are the following steps:
+
+
 We test, cleanse and validate the AIRPORTS table for:   
 
-a) uniqueness of the IATA codes
-b) length of field IATA should be always 3
-c) no quotation marks in the field AIRPORT
-
+/*:
+1) uniqueness of the IATA codes
+2) length of field IATA should be always 3
+3) no quotation marks in the field AIRPORT
+*/
 
 
 ```sql
