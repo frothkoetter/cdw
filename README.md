@@ -623,9 +623,216 @@ Note: check on Hide Equal Values to see only changed values
 
 This example shows that the execution time is greatly decreased because less data was read.
 
+## Lab 6 - Data Quality with Branching
 
-------
-## Lab 6 - Slowly Changing Dimensions (SCD) - TYPE 2
+The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. Consider an ETL operation tasked with extracting customer data from an operational database and transferring it to a data warehouse. What if the source data contains inconsistencies or duplicates, and these issues are not rectified before integration into the production environment?
+
+Such discrepancies in the production data could significantly affect the accuracy of BI reports, potentially leading to erroneous insights and consequently impacting organizational decision-making. Hence, it is imperative to conduct thorough validation and auditing of data at every stage of the data pipeline before deployment into the production environment as shown in this lab.
+
+We test, cleanse and validate the AIRPORTS table for:   
+
+a) uniqueness of the IATA codes
+b) length of field IATA should be always 3
+c) no quotation marks in the field AIRPORT
+
+
+
+```sql
+drop table if exists airports_ice;
+create table airports_ice stored by iceberg TBLPROPERTIES('format-version'='2')
+as select * from airports_csv;
+
+/*
+** QA test:  iata unique values   
+*/
+select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+select
+    iata as unique_field,
+    count(*) as n_records
+from airlinedata.airports_ice
+where iata is not null
+group by iata
+having count(*) > 1
+) iata_unique_test;
+```
+
+
+| failures | should_warn | should_error |
+| :- | :- |  :- |
+|1 | false |	false |
+
+
+```sql
+/*
+** test iata len = 3
+*/
+select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) > 100 as should_error
+from (
+      with validation as (
+	                         select iata as field
+	                          from airlinedata.airports_ice
+                         ),
+                         validation_errors as (
+	   select field from validation
+	    where LENGTH(field) != 3
+                        )
+select *
+from validation_errors
+) iata_length_test;
+```
+
+Output:
+
+|failures |	should_warn	| should_error |
+| :- | :- |  :- |
+| 42 |	true |	false |
+
+
+```sql
+/*
+**  QA test: quotation marks in fields
+*/
+select
+      count(*) as failures,
+      count(*) >10 as should_warn,
+      count(*) >1000 as should_error
+    from (
+with validation as (
+	select airport as field
+	from airlinedata.airports_csv
+),
+validation_errors as (
+	select field from validation
+	where field rlike('"')
+)
+select *
+from validation_errors
+) quotation_marks_test;
+```
+
+Output:
+
+|failures |	should_warn	| should_error |
+| :- | :- |  :- |
+| 373 |	true |	false |
+
+
+```SQL
+/*
+** create branch  
+*/
+ALTER TABLE airports_ice CREATE BRANCH test;
+
+select * from airlinedata.airports_ice.refs;
+```
+
+
+
+|name	|type	|snapshot_id |	max_reference_age_in_ms |	min_snapshots_to_keep	| max_snapshot_age_in_ms |
+| :- | :- |  :- | :- | :- |  :- |
+|qa	|BRANCH	|4861947596552380217	|NULL	|NULL	|NULL|
+|main	|BRANCH	|4861947596552380217	|NULL	|NULL	|NULL
+
+```SQL
+/*
+** Data Cleansing: data transformations
+*/
+delete from airlinedata.airports_ice.branch_qa
+where LENGTH(iata) != 3;
+
+update airlinedata.airports_ice.branch_qa
+set airport = regexp_replace( airport ,'"','')
+where airport rlike('"');
+```
+
+
+Output:
+
+ Success.
+
+```SQL
+ /*
+ ** Validate: not iata len <> 3
+ */
+ select
+       count(*) as failures,
+       count(*) != 0 as should_warn,
+       count(*) > 100 as should_error
+ from (
+       with validation as (
+ 	                         select iata as field
+ 	                          from airlinedata.airports_ice.branch_qa
+                          ),
+ validation_errors as (
+ 	select field from validation
+ 	where LENGTH(field) != 3
+ )
+ select *
+ from validation_errors
+ ) iata_length_test;
+```
+
+Output:
+
+ |failures |	should_warn	| should_error |
+ | :- | :- |  :- |
+ | 0 |	false |	false |
+
+ ```SQL
+ /*
+ **  validation: no quotation marks in Field
+ */
+ select
+       count(*) as failures,
+       count(*) >10 as should_warn,
+       count(*) >1000 as should_error
+     from (
+ with validation as (
+ 	select airport as field
+ 	from airlinedata.airports_ice.branch_qa
+ ),
+ validation_errors as (
+ 	select field from validation
+ 	where field rlike('"')
+ )
+ select *
+ from validation_errors
+ ) quotation_marks_validation;
+```
+
+
+|failures |	should_warn	| should_error |
+| :- | :- |  :- |
+| 0 |	false |	false |
+
+Move the data into the main branch and drop the branch for housekeeping
+
+ ```SQL
+ALTER table airports_ice EXECUTE FAST-FORWARD 'qa';
+
+ALTER TABLE airports_ice DROP BRANCH if exists qa;
+
+select * from airlinedata.airports_ice.refs;
+```
+
+Output:
+
+|name	|type	|snapshot_id |	max_reference_age_in_ms |	min_snapshots_to_keep	| max_snapshot_age_in_ms |
+| :- | :- |  :- | :- | :- |  :- |
+|main	|BRANCH	|4861947596552380217	|NULL	|NULL	|NULL
+
+
+This lab you saw how Iceberg branching feature helping data quality pipelines in a data engineering workflow.
+
+-----
+## Lab 7 - Slowly Changing Dimensions (SCD) - TYPE 2
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
