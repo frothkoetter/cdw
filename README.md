@@ -636,12 +636,13 @@ The QA pipeline are the following steps:
 
 We test, cleanse and validate the AIRPORTS table for:   
 
-/*:
+/**
 1) uniqueness of the IATA codes
 2) length of field IATA should be always 3
 3) no quotation marks in the field AIRPORT
 */
 
+Begin with the creation of Iseberg V2 table with the raw data and run the first test
 
 ```sql
 drop table if exists airports_ice;
@@ -666,12 +667,13 @@ having count(*) > 1
 ) iata_unique_test;
 ```
 
+The output should like this not reporting any duplicate IATA codes.
 
 | failures | should_warn | should_error |
 | :- | :- |  :- |
-|1 | false |	false |
+|0 | false |	false |
 
-
+Now running the 2nd test of the field length for the IATA code.
 ```sql
 /*
 ** test iata len = 3
@@ -694,12 +696,14 @@ from validation_errors
 ) iata_length_test;
 ```
 
-Output:
+The test shows that 42 rows are not having the correct lenght.
 
 |failures |	should_warn	| should_error |
 | :- | :- |  :- |
 | 42 |	true |	false |
 
+
+Running the 3rd test and find quotation marks
 
 ```sql
 /*
@@ -723,13 +727,13 @@ from validation_errors
 ) quotation_marks_test;
 ```
 
-Output:
+The Output is 373 rows with quotation marks and there is a warning and error level.
 
 |failures |	should_warn	| should_error |
 | :- | :- |  :- |
 | 373 |	true |	false |
 
-
+Out test showing that we data must be cleaned and create a branch with the name QA.
 ```SQL
 /*
 ** create branch  
@@ -739,12 +743,17 @@ ALTER TABLE airports_ice CREATE BRANCH test;
 select * from airlinedata.airports_ice.refs;
 ```
 
+The list of branches are as follows:
 
 
 |name	|type	|snapshot_id |	max_reference_age_in_ms |	min_snapshots_to_keep	| max_snapshot_age_in_ms |
 | :- | :- |  :- | :- | :- |  :- |
 |qa	|BRANCH	|4861947596552380217	|NULL	|NULL	|NULL|
 |main	|BRANCH	|4861947596552380217	|NULL	|NULL	|NULL
+
+The main branch always exists a base when creating the Iceberg table.
+
+Now do the cleaning job and delete rows where the IATA code is != 3 and remove the quotation marks
 
 ```SQL
 /*
@@ -759,9 +768,11 @@ where airport rlike('"');
 ```
 
 
-Output:
+Output should like this:
 
  Success.
+
+Next is to validate the data we have cleansed to be on the save side.
 
 ```SQL
  /*
@@ -785,11 +796,13 @@ Output:
  ) iata_length_test;
 ```
 
-Output:
+Output looks good:
 
  |failures |	should_warn	| should_error |
  | :- | :- |  :- |
  | 0 |	false |	false |
+
+Run the 2nd validation
 
  ```SQL
  /*
@@ -812,13 +825,13 @@ Output:
  from validation_errors
  ) quotation_marks_validation;
 ```
-
+Output looks good:
 
 |failures |	should_warn	| should_error |
 | :- | :- |  :- |
 | 0 |	false |	false |
 
-Move the data into the main branch and drop the branch for housekeeping
+Move the data from the QA branch into the main branch and drop the QA branch for housekeeping.
 
  ```SQL
 ALTER table airports_ice EXECUTE FAST-FORWARD 'qa';
