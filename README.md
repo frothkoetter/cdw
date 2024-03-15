@@ -624,6 +624,9 @@ Note: check on Hide Equal Values to see only changed values
 This example shows that the execution time is greatly decreased because less data was read.
 
 ## Lab 6 - Data Quality with Branching
+*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
+
+*Enter the your_dbname as **“db\_user001”..”db\_user020”** 
 
 The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. It is imperative to conduct thorough testing, cleansing and validation of data at every stage of the data pipeline before deployment into the production.
 
@@ -660,7 +663,7 @@ select
 select
     iata as unique_field,
     count(*) as n_records
-from airlinedata.airports_ice
+from airports_ice
 where iata is not null
 group by iata
 having count(*) > 1
@@ -685,7 +688,7 @@ select
 from (
       with validation as (
 	                         select iata as field
-	                          from airlinedata.airports_ice
+	                          from airports_ice
                          ),
                          validation_errors as (
 	   select field from validation
@@ -716,7 +719,7 @@ select
     from (
 with validation as (
 	select airport as field
-	from airlinedata.airports_csv
+	from airports_ice
 ),
 validation_errors as (
 	select field from validation
@@ -740,7 +743,7 @@ Out test showing that we data must be cleaned and create a branch with the name 
 */
 ALTER TABLE airports_ice CREATE BRANCH test;
 
-select * from airlinedata.airports_ice.refs;
+select * from ${your_dbname}.airports_ice.refs;
 ```
 
 The list of branches are as follows:
@@ -759,10 +762,10 @@ Now do the cleaning job and delete rows where the IATA code is != 3 and remove t
 /*
 ** Data Cleansing: data transformations
 */
-delete from airlinedata.airports_ice.branch_qa
+delete from ${your_dbname}.airports_ice.branch_qa
 where LENGTH(iata) != 3;
 
-update airlinedata.airports_ice.branch_qa
+update ${your_dbname}.airports_ice.branch_qa
 set airport = regexp_replace( airport ,'"','')
 where airport rlike('"');
 ```
@@ -785,7 +788,7 @@ Next is to validate the data we have cleansed to be on the save side.
  from (
        with validation as (
  	                         select iata as field
- 	                          from airlinedata.airports_ice.branch_qa
+ 	                          from ${your_dbname}.airports_ice.branch_qa
                           ),
  validation_errors as (
  	select field from validation
@@ -815,7 +818,7 @@ Run the 2nd validation
      from (
  with validation as (
  	select airport as field
- 	from airlinedata.airports_ice.branch_qa
+ 	from ${your_dbname}.airports_ice.branch_qa
  ),
  validation_errors as (
  	select field from validation
@@ -838,7 +841,7 @@ ALTER table airports_ice EXECUTE FAST-FORWARD 'qa';
 
 ALTER TABLE airports_ice DROP BRANCH if exists qa;
 
-select * from airlinedata.airports_ice.refs;
+select * from ${your_dbname}.airports_ice.refs;
 ```
 
 Output:
