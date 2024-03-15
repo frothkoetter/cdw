@@ -596,7 +596,7 @@ This example shows that the execution time is greatly decreased because less dat
 ## Lab 6 - Data Quality with Branching
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
-*Enter the your_dbname as **“db\_user001”..”db\_user020”**
+*Enter the your_dbname as **“db\_user001”..”db\_user020”** in this HUE parameter field
 
 The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. It is imperative to conduct thorough testing, cleansing and validation of data at every stage of the data pipeline before deployment into the production.
 
@@ -617,10 +617,14 @@ In this lab we go through these steps for the AIRPORTS table.
 
 Begin with the creation of ICEBERG V2 table with the raw data and run the first test
 
+*Enter the your_dbname as **“db\_user001”..”db\_user020”** in this HUE parameter field
+
+![](images/cdw-lab6-qa002.png)
+
 ```sql
-drop table if exists airports_ice;
-create table airports_ice stored by iceberg TBLPROPERTIES('format-version'='2')
-as select * from airports_csv;
+drop table if exists ${your_dbname}.airports_ice;
+create table ${your_dbname}.airports_ice stored by iceberg TBLPROPERTIES('format-version'='2')
+as select * from ${your_dbname}.airports_csv;
 
 /*
 ** QA test:  iata unique values   
@@ -711,7 +715,7 @@ Out test showing that we data must be cleaned and create a branch with the name 
 /*
 ** create branch  
 */
-ALTER TABLE airports_ice CREATE BRANCH test;
+ALTER TABLE airports_ice CREATE BRANCH qa;
 
 select * from ${your_dbname}.airports_ice.refs;
 ```
