@@ -615,11 +615,12 @@ In this lab we go through these steps for the AIRPORTS table.
 3) no quotation marks in the field AIRPORT
 
 
-Begin with the creation of ICEBERG V2 table with the raw data and run the first test
 
 *Enter the your_dbname as **“db\_user001”..”db\_user020”** in this HUE parameter field
 
 ![](images/cdw-lab6-qa002.png)
+
+Begin with the creation of ICEBERG V2 table with the raw data and run the first test
 
 ```sql
 drop table if exists ${your_dbname}.airports_ice;
