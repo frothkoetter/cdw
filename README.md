@@ -833,7 +833,7 @@ This lab you saw how Iceberg branching feature helping data quality pipelines in
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
-![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.005.png)
+![](images/cdw-lab7-001.png)
 
 We create a new SDC table ***airline\_scd*** and add columns ***valid\_from*** and ***valid\_to***. Then loading the initial 1000 rows into this SDC table, then mock up new data and change data in the table ***airlines\_stage***.
 
