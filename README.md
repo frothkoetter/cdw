@@ -316,36 +316,6 @@ ORDER BY
    dayofmonth ASC;
 ```
 
-Query: Explore passenger manifest data: do we have international connecting flights?
-
-```SQL
-SELECT
- *
-FROM
-  unique_tickets_orc a,
-  flights_orc o,
-  flights_orc d,
-  airports_orc oa,
-  airports_orc da  
-WHERE
-   a.leg1flightnum = o.flightnum
-   AND a.leg1uniquecarrier = o.uniquecarrier
-   AND a.leg1origin = o.origin
-   AND a.leg1dest = o.dest
-   AND a.leg1month = o.month
-   AND a.leg1dayofmonth = o.dayofmonth
-   AND a.leg1dayofweek = o.`dayofweek`
-   AND a.leg2flightnum = d.flightnum
-   AND a.leg2uniquecarrier = d.uniquecarrier
-   AND a.leg2origin = d.origin
-   AND a.leg2dest = d.dest
-   AND a.leg2month = d.month
-   AND a.leg2dayofmonth = d.dayofmonth
-   AND a.leg2dayofweek = d.`dayofweek`
-   AND d.origin = oa.iata
-   AND d.dest = da.iata
-   AND oa.country <> da.country ;
-  ```
 
 
 ### Defaults - Surrogate_key & Sequence
@@ -626,7 +596,7 @@ This example shows that the execution time is greatly decreased because less dat
 ## Lab 6 - Data Quality with Branching
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
-*Enter the your_dbname as **“db\_user001”..”db\_user020”** 
+*Enter the your_dbname as **“db\_user001”..”db\_user020”**
 
 The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. It is imperative to conduct thorough testing, cleansing and validation of data at every stage of the data pipeline before deployment into the production.
 
