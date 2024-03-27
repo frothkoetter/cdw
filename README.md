@@ -594,8 +594,6 @@ Note: check on Hide Equal Values to see only changed values
 This example shows that the execution time is greatly decreased because less data was read.
 
 ## Lab 6 - Data Quality with Branching
-*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
-
 *Enter the your_dbname as **“db\_user001”..”db\_user020”** in this HUE parameter field
 
 The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. It is imperative to conduct thorough testing, cleansing and validation of data at every stage of the data pipeline before deployment into the production.
