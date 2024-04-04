@@ -618,7 +618,7 @@ In this lab we go through these steps for the AIRPORTS table.
 
 ![](images/cdw-lab6-qa002.png)
 
-Begin with the creation of ICEBERG V2 table with the raw data and run the first test checking NULL values in the field IATA:
+Begin with the creation of ICEBERG V2 table with the raw data and run the first test checking uniqueness of the IATA code:
 
 ```sql
 drop table if exists ${your_dbname}.airports_ice;
