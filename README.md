@@ -657,7 +657,7 @@ Now running the 2nd test of the field length for the IATA code that must be 3:
 select
       count(*) as failures,
       count(*) != 0 as should_warn,
-      count(*) > 100 as should_error
+      count(*) != 0 as should_error
 from (
       with validation as (
 	                         select iata as field
@@ -676,7 +676,7 @@ The test shows that 42 rows are not having the correct length.
 
 |failures |	should_warn	| should_error |
 | :- | :- |  :- |
-| 42 |	true |	false |
+| 42 |	true |	true |
 
 
 Running the 3rd test and find quotation marks in the field AIRPORT
