@@ -599,7 +599,7 @@ This example shows that the execution time is greatly decreased because less dat
 The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. It is imperative to conduct thorough testing, cleansing and validation of data at every stage of the data pipeline before deployment into the production.
 
 The QA pipeline looks like the following:
-![](images/cdw-lab6-qa001.png)
+![](images/cdw-lab6-qa001a.png)
 
 The QA steps are test, cleanse, validate and propergate to production.
 
