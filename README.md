@@ -487,12 +487,13 @@ Result:
 | :- |
 | 5437433|
 
-Now select the snapshot history of the table.
+
 
 *Enter the your_dbname as **“db\_user001”..”db\_user020”** in this HUE parameter field
 
 ![](images/cdw-lab5-para01.png)
 
+Now select the snapshot history of the table.
 
 ```sql
 select * from ${your_dbname}.flights_ice.history;
