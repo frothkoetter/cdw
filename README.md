@@ -491,7 +491,7 @@ Now select the snapshot history of the table.
 
 *Enter the your_dbname as **“db\_user001”..”db\_user020”** in this HUE parameter field
 
-![](images/cdw-lab6-qa002.png)
+![](images/cdw-lab5-para01.png)
 
 
 ```sql
