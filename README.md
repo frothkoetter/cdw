@@ -485,7 +485,7 @@ Result:
 
 | row_count |
 | :- |
-| 5454913 |
+| 5437433|
 
 Now select the snapshot history of the table.
 
