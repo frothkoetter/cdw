@@ -62,15 +62,6 @@ CREATE EXTERNAL TABLE airports_csv(iata string, airport string, city string, sta
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
 STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.header.line.count"="1");
 
-drop table if exists unique_tickets_csv;
-CREATE external TABLE unique_tickets_csv (ticketnumber BIGINT, leg1flightnum BIGINT, leg1uniquecarrier STRING, leg1origin STRING,   leg1dest STRING, leg1month BIGINT, leg1dayofmonth BIGINT,   
- leg1dayofweek BIGINT, leg1deptime BIGINT, leg1arrtime BIGINT,   
- leg2flightnum BIGINT, leg2uniquecarrier STRING, leg2origin STRING,   
- leg2dest STRING, leg2month BIGINT, leg2dayofmonth BIGINT,   leg2dayofweek BIGINT, leg2deptime BIGINT, leg2arrtime BIGINT )
-ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
-STORED AS TEXTFILE LOCATION '/airlinedata-csv/unique_tickets'
-tblproperties("skip.header.line.count"="1");
-
 ```
 
 
@@ -184,9 +175,6 @@ create table airports_orc as select * from airports_csv;
 drop table if exists planes_orc;
 create table planes_orc as select * from planes_csv;
 
-drop table if exists unique_tickets_orc;
-create table unique_tickets_orc as select * from unique_tickets_csv;
-
 drop table if exists flights_orc;
 create table flights_orc partitioned by (year) as
 select year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay
@@ -215,8 +203,6 @@ Results
 |flights_orc|
 |planes_csv|
 |planes_orc|
-|unique_tickets_csv|
-|unique_tickets_orc|
 
 The DESCRIBE cmd shows detailed information about the table.
 
@@ -503,9 +489,13 @@ Result:
 
 Now select the snapshot history of the table.
 
-*** Change the database name “db\_user001”
+*Enter the your_dbname as **“db\_user001”..”db\_user020”** in this HUE parameter field
+
+![](images/cdw-lab6-qa002.png)
+
+
 ```sql
-select * from DB_userXXX.flights_ice.history;
+select * from ${your_dbname}.flights_ice.history;
 ```
 
 Result: two snapshots of the table in the output, one for each insert command.
@@ -985,39 +975,6 @@ Select the “emp\_all” table from the list, this will result in Atlas display
 This lineage graph shows the inputs, outputs as well as the processing steps resulting from the execution of our SQL code in the Data Warehouse.
 
 The red circle marks the currently selected entity. Atlas will always display the current entity's type in braces next to the entity name (middle, top of the page, e.g. "hive_table"). Clicking on one of the nodes will display a popup menu, which allows us to navigate through the lineage graph.
-
-   Click on the “emp\_age” input table and select the link (the “guid” attribute) in the resulting popup menu:
-   ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.010.png)
-
-In the screen that follows, select the “Schema” tab and in that table, click on the link for the “age” field:
-   ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.011.png)
-
-[Explanation: we are now looking at the metadata page for the “age” column of the “emp\_age” table. There’s also a lineage tab here, because CDP tracks table- as well as column-based lineage for the Data Warehouse. What we want to do here: age is certainly a piece of sensitive personal information. We want to classify (‘tag’) it appropriately and then let SDX take care of treating this field as classified information that’s not visible to everyone.]
-
-   Still in the screen for the “age” column, click on the plus sign next to “Classifications”; this will bring up a dialog:
-
-
-   ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.012.png)
-
-   In the drop-down menu, select “PII” and make sure the “Propagate” checkbox is enabled.
-   Click the “Add” button.
-[This effectively means we apply the classification “PII” to the selected column and Atlas also will apply that classification to all columns that have been or will be derived from it.]
-
-We can actually check this easily by using the lineage graph to navigate to a downstream table’s column: select one of the nodes that *don’t* have gear wheels (those are process information) and select the guid link.
-
-This will give us the metadata for the “age” column in a derived table. Note the information on “Propagated Classifications”:
-   ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.013.png)
-
-Try to query all columns from the “emp\_all” table again in HUE – by simply executing the last query again.
-Why did we get an error now? There exists a policy in Ranger that denies all members of the hands-on lab group access to Hive data that is classified as “PII”. Let’s check that out.
-
-Like before for Atlas, open the Ranger UI via the triple-dot menu in you warehouse’s Database Catalog: ![](images/RangerUIOpen.png)
-
-In the Ranger UI, select the “Audit” menu and limit the amount of data displayed by specifying the filter expressions:
-   Result: Denied
-   Service Type: HADOOP SQL
-
-![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.015.png)
 
 
 -----
