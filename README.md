@@ -835,11 +835,12 @@ Create the Hive managed table for airlines. Load initial by copy 1000 rows of cu
 ```sql
 drop table if exists airlines_scd;
 
-create table airlines_scd(code string, description string, updated_at date, valid_from date, valid_to date);
+create table airlines_scd(code string, description string, updated_at timestamp, valid_from timestamp, valid_to timestamp);
 
 insert into airlines_scd
-  select *, current_date(), cast('2021-01-01' as date), cast(null as date)
-  from airlines_csv;
+    select *, current_date(), cast('2021-01-01' as timestamp), cast(null as timestamp)
+    from airlines_csv;
+
 ```
 
 Create an external staging table pointing to our complete airlines dataset (1491 records) and update a description to mockup a change in the dimension
@@ -879,9 +880,9 @@ using (
 on sub.join_key = airlines_scd.code
 when matched
  and sub.description <> airlines_scd.description
- then update set valid_to = current_date(), updated_at = current_date()
+ then update set valid_to = current_timestamp(), updated_at = current_timestamp()
 when not matched
- then insert values (sub.code, sub.description, current_date(), current_date(), null);
+ then insert values (sub.code, sub.description, current_timestamp(), current_timestamp(), null);
 ```
 
 View the changed records and see that the VALID_FROM and VALID_TO dates are set
@@ -902,10 +903,10 @@ Results
 
 |CODE|DESCRIPTION|UPDATAED\_AT|VALID\_FROM|VALID\_TO|
 | :- | :- | :- | :- | :- |
-|02Q|Titan Airways|2022-12-26|2021-01-01|2022-12-26|
-|02Q|Update - TITAN AIRWAYS|2022-12-26|2021-05-26|null|
-|04Q|Tradewind Aviation|2022-12-26|2021-01-01|2022-12-26|
-|04Q|Update - TRADEWIND AVIATION|2022-12-26|2021-12-26|null|
+|02Q|Titan Airways|2024-04-09 09:52:03.535657|2021-01-01 00:00:00|2024-04-09 09:52:03.535657|
+|02Q|Update - TITAN AIRWAYS|2022-12-26 09:52:03.535657|2021-05-26 09:52:03.535657|null|
+|04Q|Tradewind Aviation|2022-12-26 09:52:03.535657|2021-01-01 00:00:00|2022-12-26 09:52:03.535657|
+|04Q|Update - TRADEWIND AVIATION|2022-12-26 09:52:03.535657|2021-12-26 09:52:03.535657|null|
 
 
 -----
