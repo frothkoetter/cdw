@@ -843,59 +843,93 @@ insert into airlines_scd
 
 ```
 
-Create an external staging table pointing to our complete airlines dataset (1491 records) and update a description to mockup a change in the dimension
+Create an external staging table pointing to our complete airlines dataset (1491 records), add one row, update a description and delete two rows to mockup a change in the dimension
 
 ```sql
 drop table if exists airlines_stage;
 
 create table airlines_stage as select * from airlines_csv;
 
+insert into airlines_stage
+   values ('FFF','New Airline');
+
 update airlines_stage
 set
  description = concat('Update - ',upper(description))
 where
  code in ('02Q','04Q');
+
+delete from airlines_stage
+ where
+   code in ('05Q','06Q');
 ```
 
 Perform the SCD type 2 Merge Command
 
 ```sql
-merge into airlines_scd
-using (
- -- The base staging data.
- select
-   airlines_stage.code as join_key,
-   airlines_stage.* from airlines_stage
- union all
- -- Generate an extra row for changed records.
- -- The null join_key means it will be inserted.
- select
-   null, airlines_stage.*
+merge into airlines_scd as target
+using  (
+select
+   'update - change the old row' as ops,
+   source.code as join_key,
+   source.code,
+   source.description
+   from
+    airlines_stage as source
+   where exists (
+            select 1 from airlines_scd as target
+               where source.code = target.code
+               and  source.description <> target.description )
+union all
+select
+   'update - insert row' as ops,
+    null as join_key,
+    airlines_stage.code,
+    airlines_stage.description
  from
    airlines_stage join airlines_scd on airlines_stage.code = airlines_scd.code
  where
    ( airlines_stage.description <> airlines_scd.description )
-   and airlines_scd.valid_to is null
-) sub
-on sub.join_key = airlines_scd.code
+union all
+select
+    'insert' as ops,
+    null as join_key,
+    source.code,
+    source.description
+  from
+    airlines_stage as source
+  where not exists (
+        select 1 from airlines_scd as target
+          where target.code = source.code)
+union all
+select
+    'delete' as cmd,
+    target.code as join_key,
+    target.code,
+    target.description
+  from
+      airlines_scd as target
+  where not exists (
+        select 1 from airlines_stage as source
+          where target.code = source.code)
+) source
+on source.join_key = target.code
 when matched
- and sub.description <> airlines_scd.description
- then update set valid_to = current_timestamp(), updated_at = current_timestamp()
+ then update
+    set valid_to = current_timestamp(), updated_at = current_timestamp()
 when not matched
- then insert values (sub.code, sub.description, current_timestamp(), current_timestamp(), null);
+ then insert
+    values (source.code, source.description, current_timestamp(), current_timestamp(), null);
 ```
 
 View the changed records and see that the VALID_FROM and VALID_TO dates are set
 
 ```sql
 select
- *
-from
- airlines_scd
-where
- code in ('02Q','04Q')
-order by
- code,
+  *
+from airlines_scd
+ where code in ('02Q','04Q','05Q','06Q','FFF')
+ order by code asc,
  valid_from;
 ```
 
@@ -907,8 +941,9 @@ Results
 |02Q|Update - TITAN AIRWAYS|2022-12-26 09:52:03.535657|2021-05-26 09:52:03.535657|null|
 |04Q|Tradewind Aviation|2022-12-26 09:52:03.535657|2021-01-01 00:00:00|2022-12-26 09:52:03.535657|
 |04Q|Update - TRADEWIND AVIATION|2022-12-26 09:52:03.535657|2021-12-26 09:52:03.535657|null|
-
-
+|05Q|"Comlux Aviation|2022-12-26 09:52:03.535657|2021-01-01 00:00:00|2022-12-26 09:52:03.535657|
+|06Q|Master Top Linhas Aereas Ltd.| 2022-12-26 09:52:03.535657|2021-01-01 00:00:00|2022-12-26 09:52:03.535657|
+|FFF|	New Airline| 2022-12-26 09:52:03.535657|2022-12-26 09:52:03.535657|2022-12-26 09:52:03.535657|
 -----
 ## Lab 7 - Data Security & Governance
 
