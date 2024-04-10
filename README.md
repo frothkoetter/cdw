@@ -824,11 +824,13 @@ This lab you saw how Iceberg branching feature helping data quality pipelines in
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
+This lab demonstrates a comprehensive merge operation using ACID tables in Hive, including the ability to update, insert, and delete rows within a single transaction.
+
+A Type 2 SCD retains the full history of values. When the value of a chosen attribute changes, the current record is closed. A new record is created with the changed data values and this new record becomes the current record.
+
 ![](images/cdw-lab7-001.png)
 
-We create a new SDC table ***airline\_scd*** and add columns ***valid\_from*** and ***valid\_to***. Then loading the initial 1000 rows into this SDC table, then mock up new data and change data in the table ***airlines\_stage***.
-
-Finally merging these two tables with a single MERGE command to maintain the historical data and check the results.
+We create a new SDC table ***airline\_scd*** and add columns ***valid\_from*** and ***valid\_to***. Then loading the initial into this SDC table, then mock up new data and change data in the table ***airlines\_stage***.
 
 Create the Hive managed table for airlines. Load initial by copy 1000 rows of current airlines with hard code the valid_from date
 
@@ -864,7 +866,7 @@ delete from airlines_stage
    code in ('05Q','06Q');
 ```
 
-Perform the SCD type 2 Merge Command
+Finally merging these two tables with a single MERGE command to maintain the historical data and check the results.
 
 ```sql
 merge into airlines_scd as target
