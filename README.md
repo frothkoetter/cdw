@@ -840,7 +840,7 @@ drop table if exists airlines_scd;
 create table airlines_scd(code string, description string, updated_at timestamp, valid_from timestamp, valid_to timestamp);
 
 insert into airlines_scd
-    select *, current_date(), cast('2021-01-01' as timestamp), cast(null as timestamp)
+    select *, current_date(), cast('2021-01-01' as timestamp), cast('9999-01-01' as timestamp)
     from airlines_csv;
 
 ```
@@ -859,11 +859,11 @@ update airlines_stage
 set
  description = concat('Update - ',upper(description))
 where
- code in ('02Q','04Q');
+ code in ('02Q');
 
 delete from airlines_stage
  where
-   code in ('05Q','06Q');
+   code in ('04Q');
 ```
 
 Finally merging these two tables with a single MERGE command to maintain the historical data and check the results.
@@ -921,32 +921,34 @@ when matched
     set valid_to = current_timestamp(), updated_at = current_timestamp()
 when not matched
  then insert
-    values (source.code, source.description, current_timestamp(), current_timestamp(), null);
+    values (source.code, source.description, current_timestamp(), current_timestamp(), cast('9999-01-01' as timestamp) );
 ```
 
 View the changed records and see that the VALID_FROM and VALID_TO dates are set
 
 ```sql
 select
-  *
-from airlines_scd
- where code in ('02Q','04Q','05Q','06Q','FFF')
- order by code asc,
- valid_from;
+  code,
+  description,
+  valid_from,
+  valid_to
+from
+  airlines_scd
+ where code in ('02Q','04Q','FFF')
+ order by
+  code asc,
+  valid_from;
 ```
 
 Results
 
-|CODE|DESCRIPTION|UPDATAED\_AT|VALID\_FROM|VALID\_TO|
-| :- | :- | :- | :- | :- |
-|02Q|Titan Airways|2022-12-26 09:52:03.535657|2021-01-01 00:00:00|2022-12-26 09:52:03.535657|
-|02Q|Update - TITAN AIRWAYS|2022-12-26 09:52:03.535657|2021-05-26 09:52:03.535657|null|
-|04Q|Tradewind Aviation|2022-12-26 09:52:03.535657|2021-01-01 00:00:00|2022-12-26 09:52:03.535657|
-|04Q|Update - TRADEWIND AVIATION|2022-12-26 09:52:03.535657|2021-12-26 09:52:03.535657|null|
-|05Q|"Comlux Aviation|2022-12-26 09:52:03.535657|2021-01-01 00:00:00|2022-12-26 09:52:03.535657|
-|06Q|Master Top Linhas Aereas Ltd.| 2022-12-26 09:52:03.535657|2021-01-01 00:00:00|2022-12-26 09:52:03.535657|
-|FFF|	New Airline| 2022-12-26 09:52:03.535657|2022-12-26 09:52:03.535657|2022-12-26 09:52:03.535657|
------
+|CODE|DESCRIPTION|VALID\_FROM|VALID\_TO|
+| :- | :- | :- | :- |
+|02Q	|Titan Airways	|2021-01-01 00:00:00	|2024-04-11 12:06:15.649675|
+|02Q	|Update - TITAN AIRWAYS	|2024-04-11 12:06:15.649675	|9999-01-01 00:00:00|
+|04Q	|Tradewind Aviation	|2021-01-01 00:00:00	|2024-04-11 12:06:15.649675|
+|FFF	|New Airline	|2024-04-11 12:06:15.649675	|9999-01-01 00:00:00|
+|-----
 ## Lab 7 - Data Security & Governance
 
 The combination of the Data Warehouse with SDX offers a list of powerful features like rule-based masking columns based on a user’s role and/or group association or rule-based row filters.
