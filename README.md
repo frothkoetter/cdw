@@ -136,9 +136,9 @@ Results
 |N366UA	| 24808 |331318	| 12113	|
 |N377UA	| 25105 |328546	| 12163	|
 
-### SQL AI Assistant  
+### SQL AI Assistant - makes SQL development faster, easier, and less error-prone
 
-A SQL AI Assistant has been integrated into Hue with the capability to leverage the power of Large Language Models (LLMs) for various SQL tasks. It helps you to create, edit, optimize, fix, and succinctly summarize queries using natural language and makes SQL development faster, easier, and less error-prone.
+The SQL AI Assistant is an AI-powered tool designed to enhance SQL development, making it faster, more intuitive, and less prone to errors. By leveraging advanced contextual understanding of your data, it provides accurate and relevant SQL code suggestions that improve productivity. Integrated into Hue within Cloudera, this assistant harnesses the capabilities of Large Language Models (LLMs) for a range of SQL tasks, including query creation, editing, optimization, debugging, and summarization.
 
 Click on the blue dot to launch the SQL AI Assistant
 
