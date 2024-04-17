@@ -1,0 +1,77 @@
+from airflow import DAG
+from airflow.operators.hive_operator import HiveOperator
+from airflow.operators.python_operator import PythonOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from cloudera.cdp.airflow.operators.cdw_operator import CDWOperator
+from cloudera.cdp.airflow.operators.cde_operator import CDEJobRunOperator
+from airflow.operators.dummy_operator import DummyOperator
+from datetime import datetime, timedelta
+import logging
+
+
+# Define default arguments for the DAG
+default_args = {
+    'owner': 'frothkoetter',
+    'start_date': datetime(2024, 4, 15),
+    'retries': 0,
+    'retry_delay': timedelta(minutes=5),
+}
+
+# Instantiate the DAG
+dag = DAG(
+    'sql_validation_and_error_check',
+    default_args=default_args,
+    description='A DAG for executing SQL queries and performing error checks',
+    schedule_interval="@daily", 
+    is_paused_upon_creation=False
+)
+
+# Define the SQL query 
+cdw_lab6_q1 = """
+select count(1) as num_rows  
+from airlinedata.airports_ice;
+"""
+
+# Function to execute SQL query and set XCom variable
+def execute_sql_and_set_xcom_variable(**kwargs):
+    ti = kwargs['ti']
+
+    # Execute SQL query using HiveOperator
+    # hive_task = CDWOperator(
+    #     task_id='execute_sql_task',
+    #     cli_conn_id='cdw',  # Specify your Hive connection ID
+    #     hql=cdw_lab6_q1,
+    #     schema='airlinedata',
+    #    dag=dag,
+    # )
+    hive_task = SQLExecuteQueryOperator(
+        task_id='execute_sql_task',
+        conn_id='cdw_hiveserver2_thrift',  # Specify your Hive connection ID
+        sql=cdw_lab6_q1
+    )
+
+    # Wait for HiveOperator task to complete
+    hive_task.execute(context=kwargs)
+    
+
+    # Retrieve SQL query result (num_rows)
+    sql_result = ti.xcom_pull(task_ids='execute_sql_task', key='num_rows')
+    logging.info("-----> retrive SQL result.")
+    logging.info( sql_result )
+
+    # Set SQL result as XCom variable
+    if sql_result:
+        num_rows = sql_result['num_rows']
+        ti.xcom_push(key='num_rows_xcom', value=num_rows)
+        print(f"Set XCom variable 'num_rows_xcom' with value: {num_rows}")
+
+# Define PythonOperator to execute the task function
+set_xcom_variable_task = PythonOperator(
+    task_id='set_xcom_variable_task',
+    python_callable=execute_sql_and_set_xcom_variable,
+    provide_context=True,
+    dag=dag,
+)
+
+# Set task dependencies
+set_xcom_variable_task

@@ -1,0 +1,126 @@
+from airflow import DAG
+from airflow.operators.hive_operator import HiveOperator
+from airflow.operators.python_operator import PythonOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from cloudera.cdp.airflow.operators.cdw_operator import CDWOperator
+from cloudera.cdp.airflow.operators.cde_operator import CDEJobRunOperator
+from airflow.operators.dummy_operator import DummyOperator
+from datetime import datetime, timedelta
+import logging
+
+
+# Define default arguments for the DAG
+default_args = {
+    'owner': 'frothkoetter',
+    'start_date': datetime(2024, 4, 15),
+    'retries': 0,
+    'retry_delay': timedelta(minutes=5),
+}
+
+# Instantiate the DAG
+dag = DAG(
+    'sql_validation_and_error_check',
+    default_args=default_args,
+    description='A DAG for executing SQL queries and performing error checks',
+    schedule_interval="@daily", 
+    is_paused_upon_creation=False
+)
+
+# Define the SQL query 
+cdw_lab6_q1 = """
+/*
+** QA test:  iata unique values   
+*/
+select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+select
+    iata as unique_field,
+    count(*) as n_records
+from airports_ice
+where iata is not null
+group by iata
+having count(*) > 1
+) iata_unique_test;
+"""
+
+# Function to push data to XCom
+def push_data_to_xcom(**kwargs):
+    data_to_push = {'key': 'value'}
+    ti = kwargs['ti']
+    ti.xcom_push(key='my_data', value=data_to_push)
+
+# Define PythonOperator to execute the task
+push_xcom_task = PythonOperator(
+    task_id='push_xcom_task',
+    python_callable=push_data_to_xcom,
+    provide_context=True,
+    dag=dag,
+)
+
+# Function to pull data from XCom
+def pull_data_from_xcom(**kwargs):
+    ti = kwargs['ti']
+    data_pulled = ti.xcom_pull(task_ids='push_xcom_task', key='my_data')
+    print("Pulled data from XCom:", data_pulled)
+
+# Define PythonOperator to execute the task
+pull_xcom_task = PythonOperator(
+    task_id='pull_xcom_task',
+    python_callable=pull_data_from_xcom,
+    provide_context=True,
+    dag=dag,
+)
+
+# Function to execute the SQL query and check for errors
+def execute_sql_and_check_errors(**kwargs):
+    ti = kwargs['ti']
+    cdw_result = ti.xcom_pull(task_ids='run_sql_query')
+    logging.info("------------------------------")
+    logging.info( cdw_result )
+    logging.info("------------------------------")
+ 
+    if cdw_result:
+        failures = cdw_result[0][0]
+        should_warn = cdw_result[0][1]
+        should_error = cdw_result[0][2]
+
+        if should_error:
+            raise ValueError(f"SQL validation test failed with {failures} failures. Critical error detected.")
+        elif should_warn:
+            print(f"SQL validation test completed with {failures} failures. Warnings detected.")
+        else:
+            print(f"SQL validation test completed successfully with {failures} failures.")
+    else:
+        raise ValueError("No result returned from the SQL query.")
+
+# Define HiveOperator to run the SQL query
+run_sql_query_task = SQLExecuteQueryOperator(
+    task_id='run_sql_query',
+    dag=dag,
+    conn_id='cdw',
+    sql=cdw_lab6_q1
+)
+
+run_sql_query_task_cdw = CDWOperator(
+    task_id='run_sql_query_cdw',
+    dag=dag,
+    cli_conn_id='cdw',
+    hql=cdw_lab6_q1,
+    schema='airlinedata',
+    use_proxy_user=False,
+    query_isolation=True
+)
+
+# Define PythonOperator to check the SQL query results
+check_errors_task = PythonOperator(
+    task_id='check_sql_errors',
+    python_callable=execute_sql_and_check_errors,
+    provide_context=True,
+    dag=dag,
+)
+
+# Set task dependencies
+push_xcom_task >> pull_xcom_task >> run_sql_query_task_cdw >> run_sql_query_task >> check_errors_task
