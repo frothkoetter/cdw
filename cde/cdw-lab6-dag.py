@@ -4,6 +4,7 @@ from datetime import timezone
 from airflow import DAG
 from cloudera.airflow.providers.operators.cde import CdeRunJobOperator
 from airflow.providers.common.sql.operators.sql import ( 
+	BranchSQLOperator,
 	SQLColumnCheckOperator, 
 	SQLTableCheckOperator, 
 	SQLCheckOperator,
@@ -21,7 +22,7 @@ default_args = {
     'owner': 'frothkoe',
     'retry_delay': timedelta(seconds=5),
     'depends_on_past': False,
-    'start_date':datetime(2024, 4, 16),
+    'start_date':datetime.now(),
 }
 
 dag = DAG(
@@ -51,12 +52,11 @@ from validation_errors
 ) quotation_marks_test;
 """
 
-dw_check_quotation_mark = SQLValueCheckOperator(
+dw_check_quotation_mark = BranchSQLOperator(
     task_id="dataset-check-quotation_mark",
     conn_id=_CONN_ID,
-    pass_value=100,
-    tolerance=0.1,  # Tolerance percentage for comparison (optional)
-    #comparison_condition="==",
+    follow_task_ids_if_false=['dataset-check-num-rows'],
+    follow_task_ids_if_true=['dataset-qa-quotation_mark'],
     sql=cdw_check_quotation_mark,
     dag=dag,
 )
@@ -70,7 +70,6 @@ dw_qa_quotation_mark = SQLExecuteQueryOperator(
     task_id="dataset-qa-quotation_mark",
     conn_id=_CONN_ID,
     sql=cdw_qa_quotation_mark,
-    trigger_rule='one_failed',
     dag=dag,
 )
 
@@ -82,33 +81,27 @@ dw_check_num_rows = SQLCheckOperator(
     task_id="dataset-check-num-rows",
     conn_id=_CONN_ID,
     sql=cdw_check_num_rows,
+    trigger_rule="none_failed",
     dag=dag,
 )
 
-cdw_drop = """
-drop table if exists default.airports;
-"""
-
 cdw_create = """
+drop table if exists default.airports;
 create table default.airports 
  stored by iceberg TBLPROPERTIES('format-version'='2') 
 as 
  select * from airlinedata.airports_ice;
+update default.airports
+set airport = regexp_replace( airport ,'"','')
+where airport rlike('"') and 1=2;
 """
-
-dw_drop = SQLExecuteQueryOperator(
-    task_id="dataset-drop-cdw",
-    conn_id=_CONN_ID,
-    sql=cdw_drop,
-    dag=dag,
-    split_statements=True,
-    return_last=True,
-)
 
 dw_create = SQLExecuteQueryOperator(
     task_id="dataset-create-cdw",
     conn_id=_CONN_ID,
     sql=cdw_create,
+    split_statements=True,
+    return_last=True,
     dag=dag,
 )
 
@@ -151,9 +144,9 @@ dw_table_checks = SQLTableCheckOperator(
         conn_id=_CONN_ID,
         table="default.airports",
         checks={
-            "row_count_check": {"check_statement": "COUNT(*) >= 10000"},
+            "row_count_check": {"check_statement": "COUNT(*) between 3000 and 4000"   },
         },
     )
 
 
-dw_drop >> dw_create >> dw_check_quotation_mark >> dw_qa_quotation_mark >> dw_check_num_rows >>  dw_column_checks >>  dw_table_checks >> dw_query >> dw_cursor
+dw_create >> dw_table_checks >>  dw_check_num_rows >> dw_check_quotation_mark >> dw_qa_quotation_mark >>  dw_column_checks >>  dw_query >> dw_cursor
