@@ -1,0 +1,1 @@
+curl -H "Access-Token: eb3400b8-fa7f-4b56-8ce2-3671ec9fce76" -X POST https://app.verta.ai/api/v1/autodoc/llm/llm-endpoint/predict/endpoint/45/gx-dataquality -d '{"input":{"success":"true","test":"table row"}}' -H "Content-Type: application/json"

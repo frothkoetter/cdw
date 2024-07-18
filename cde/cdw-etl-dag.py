@@ -15,6 +15,8 @@ default_args = {
     'retry_delay': timedelta(minutes=5)
 }
 
+_CONN_ID = 'cdw-hive'
+
 dag = DAG(
     'cdw-etl-dag', default_args=default_args, catchup=False, schedule_interval="15 * * * *", is_paused_upon_creation=False)
 
@@ -63,7 +65,7 @@ start = DummyOperator(task_id='start', dag=dag)
 cdw_cleanup = CDWOperator(
     task_id='cdw-cleanup',
     dag=dag,
-    cli_conn_id='cdw',
+    cli_conn_id=_CONN_ID,
     hql=vw_airlinedata_cleanup,
     schema='default',
     use_proxy_user=False,
@@ -74,7 +76,7 @@ cdw_cleanup = CDWOperator(
 cdw_dim = CDWOperator(
     task_id='cdw-dim',
     dag=dag,
-    cli_conn_id='cdw',
+    cli_conn_id=_CONN_ID,
     hql=vw_airlinedata_dim,
     schema='default',
     use_proxy_user=False,
@@ -85,7 +87,7 @@ cdw_dim = CDWOperator(
 cdw_fact = CDWOperator(
  task_id='cdw-fact',
    dag=dag,
-   cli_conn_id='cdw',
+   cli_conn_id=_CONN_ID,
    hql=vw_airlinedata_fact,
    schema='default',
    use_proxy_user=False,
@@ -98,7 +100,7 @@ wait = DummyOperator(task_id='wait', dag=dag)
 cdw_mv = CDWOperator(
     task_id='cdw-mv',
     dag=dag,
-    cli_conn_id='cdw',
+    cli_conn_id=_CONN_ID,
     hql=vw_airlinedata_mv,
     schema='default',
     use_proxy_user=False,
@@ -108,7 +110,7 @@ cdw_mv = CDWOperator(
 cdw_report = CDWOperator(
     task_id='cdw-report',
     dag=dag,
-    cli_conn_id='cdw',
+    cli_conn_id=_CONN_ID,
     hql=vw_airlinedata_report,
     schema='default',
     use_proxy_user=False,
