@@ -1,6 +1,6 @@
 
 
-# CDW Workshop - vHoL  
+# Cloudera Data Warehouse - Hands-on-Lab
 
 Analyze Stored Data
 
