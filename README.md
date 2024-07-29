@@ -33,14 +33,7 @@ select current_database();
 -----
 ## Lab 2 - External Tables
 
-Run DDL to create four external tables on the CSV data files, which are already in cloud object storage.
-
-**Enter  as
-```sql
-abfs://data@cdppocida.dfs.core.windows.net
-```
-in this HUE parameter field CLOUD_STORAGE
-
+Copy & paste the DDL commands to create four external tables on the CSV data files, which are already in cloud object storage.
 
 ```sql
 drop table if exists flights_csv;
@@ -71,6 +64,13 @@ STORED AS TEXTFILE LOCATION '${CLOUD_STORAGE}/airlinedata-csv/airports' tblprope
 
 ```
 
+Enter:
+```sql
+abfs://data@cdppocida.dfs.core.windows.net
+```
+in this HUE parameter field CLOUD_STORAGE
+
+And run the DDL commands.
 
 Check that you created tables
 
