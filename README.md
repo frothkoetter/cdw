@@ -1022,6 +1022,8 @@ The red circle marks the currently selected entity. Atlas will always display th
 
 
 -----
+# Bonus Material (optional)
+
 ## Lab 8 - Data Visualization
 
 
@@ -1055,9 +1057,10 @@ The red circle marks the currently selected entity. Atlas will always display th
 
 ||
 | :- |
-# Bonus Material (optional)
+
 
 ## 9 - Continues Data Pipeline
+## Require special setup, not Available by default
 
 During the workshop every minute new streaming flight events are
  - created
