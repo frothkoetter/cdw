@@ -35,7 +35,11 @@ select current_database();
 
 Run DDL to create four external tables on the CSV data files, which are already in cloud object storage.
 
-*Enter  as ```sql abfs://data@cdppocida.dfs.core.windows.net``` in this HUE parameter field CLOUD_STORAGE
+**Enter  as
+```sql
+abfs://data@cdppocida.dfs.core.windows.net
+```
+in this HUE parameter field CLOUD_STORAGE
 
 
 ```sql
