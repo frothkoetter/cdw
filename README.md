@@ -26,7 +26,17 @@ CREATE DATABASE DB_USER0**;
 
 USE DB_USER0**;
 ```
+Refresh the list of databases
+
+![](images/cdw-lab1-hue-01.png)
+
+Select you databases from the drop down list
+
+![](images/cdw-lab1-hue-02.png)
+
+
 Your can check your current database
+
 ```sql
 select current_database();
 ```
