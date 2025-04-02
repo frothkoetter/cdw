@@ -952,7 +952,7 @@ Results
 |-----
 
 -----
-## Lab 8 - Data Visualization
+## Lab 9 - Data Visualization
 
 
 1. Use Data Visualization to further explore the data set.
@@ -981,7 +981,22 @@ Results
 |17|<p>Save Dashboard</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.088.png)</p><p></p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.089.png)</p>|
 |18|<p>View Dashboard</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.090.png) click on visuals tab </p><p></p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.091.png)</p><p></p><p>Click on Dashboard</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.092.png)</p><p></p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.093.png)</p>|
 
+## Lab 10 - Observability
 
+Observability is important because it continuously gathers and monitors performance data from applications and infrastructure components.
+
+Real-time correlations are made to identify both current and potential issues, providing actionable insights and recommendations to resolve them proactively.
+
+Navigate to Observability
+![](images/cdw-lab10-observ1.png)
+
+Select the virtual Warehouse
+![](images/cdw-lab10-observ2.png)
+
+Select Hive
+![](images/cdw-lab10-observ2.png)
+
+Now you can start exploring the dashboard. 
 
 ||
 | :- |
