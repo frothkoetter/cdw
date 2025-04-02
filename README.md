@@ -997,6 +997,7 @@ Select Hive
 ![](images/cdw-lab10-observ4.png)
 
 Now you can start exploring the dashboard.
+![](images/cdw-lab10-observ5.png)
 
 ||
 | :- |
