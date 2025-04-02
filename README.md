@@ -994,7 +994,7 @@ Select the virtual Warehouse
 ![](images/cdw-lab10-observ2.png)
 
 Select Hive
-![](images/cdw-lab10-observ3.png)
+![](images/cdw-lab10-observ4.png)
 
 Now you can start exploring the dashboard.
 
