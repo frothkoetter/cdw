@@ -820,6 +820,102 @@ Output:
 
 This lab you saw how Iceberg branching feature helping data quality pipelines in a data engineering workflow.
 
+
+## Lab 7 - Table Maintenance
+
+The next part is about Iceberg table maintenance
+
+We will delete rows for three months and change the partition schema before optimize the table.
+
+
+```sql
+/*
+** delete few months of data
+*/
+delete from flights_ice where dayofmonth = 2;
+delete from flights_ice where dayofmonth = 4;
+delete from flights_ice where dayofmonth = 6;
+```
+
+The deleted rows are marked into files and keeps the rows in the original data file or in other words the delete rows are not removed from the data files. Let's see how many physical files we have:
+
+```sql
+/*
+** show delete files and data files
+*/
+SELECT CASE content
+     WHEN 0 THEN 'data file'
+     WHEN 1 THEN 'delete file'
+     ELSE 'n/a' END AS content_type,
+     count(1) count_files,
+     round(sum((file_size_in_bytes/1024/1024)),3) total_file_size_MB,
+     round(avg((file_size_in_bytes/1024/1014)),3) avg_file_size_MB     
+FROM ${your_dbname}.flights_ice.all_files
+Group by content;
+```
+
+Result: showing three newly delete files, one for every delete command.
+
+| content_type |	count_files	| total_file_size_mb | avg_file_size_mb |
+| :- | :- | :- | :- |
+| delete file	| 3	|  2.084	| 0.702 |
+| data file	| 5	|  127.447	| 25.741 |
+
+Note: The delete files are very small because they only holding the position of the delete rows.
+
+
+The data files having two different partition schemes
+   - by YEAR
+   - by YEAR, MONTH, DAYOFMONTH
+
+Let's organise the data in a new partition by YEAR, MONTH and optimize or compact the table.
+
+```sql
+/*
+** set the partition to YEAR/MONTH, no old data is moved or re-organised.
+*/
+ALTER TABLE flights_ice SET PARTITION SPEC (year ,month);
+```
+
+Now let's do the real hard work, create a new snapshot and rewrite the data files.
+
+```sql
+/*
+** create a new data file (without the deleted rows)
+*/
+OPTIMIZE TABLE flights_ice REWRITE DATA;
+```
+Note: this may need some time to finish ( 2 minutes or more depending on the workload)
+
+Because we have meanwhile many snapshots and the all data is still available.
+
+To remove the unused data we now expire the snapshots and remove the data pyhsically.
+
+```sql
+/*
+** expire all snapshots that will remove all unused the data and delete files
+*/
+ALTER TABLE flights_ice EXECUTE EXPIRE_SNAPSHOTS('2024-12-31 24:00:00');  
+```
+
+```sql
+SELECT CASE content
+     WHEN 0 THEN 'data file'
+     WHEN 1 THEN 'delete file'
+     ELSE 'n/a' END AS content_type,
+     count(1) count_files,
+     round(sum((file_size_in_bytes/1024/1024)),3) total_file_size_MB,
+     round(avg((file_size_in_bytes/1024/1014)),3) avg_file_size_MB     
+FROM ${your_dbname}.flights_ice.all_files
+Group by content;
+```
+
+| content_type |	count_files	| total_file_size_mb | avg_file_size_mb |
+| :- | :- | :- | :- |
+| data file	| 13	| 61.285	| 4.761 |
+
+This shows only data files and all not more needed data in old snapshots are purged.
+
 -----
 ## Lab 8 - Slowly Changing Dimensions (SCD) - TYPE 2
 
