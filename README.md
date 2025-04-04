@@ -895,7 +895,7 @@ To remove the unused data we now expire the snapshots and remove the data pyhsic
 /*
 ** expire all snapshots that will remove all unused the data and delete files
 */
-ALTER TABLE flights_ice EXECUTE EXPIRE_SNAPSHOTS('2024-12-31 24:00:00');  
+ALTER TABLE flights_ice EXECUTE EXPIRE_SNAPSHOTS('2025-12-31 24:00:00');  
 ```
 
 ```sql
