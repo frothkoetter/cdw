@@ -144,15 +144,11 @@ Click on the blue dot to launch the SQL AI Assistant
 
 ![](images/cdw-lab1-ai001.png)
 
-this unfolds this bar
+this unfolds this bar and click on EXPLAIN
 
 ![](images/cdw-lab1-ai002.png)
 
-Click on EXPLAIN to understand SQL query command
-
-![](images/cdw-lab1-ai003.png)
-
-it will take a few secondes to generate this outcome.
+The SQL AI Assistant will take a few seconds to generate a outcome.
 
 ![](images/cdw-lab1-ai004.png)
 

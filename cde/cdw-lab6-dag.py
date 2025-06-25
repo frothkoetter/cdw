@@ -35,7 +35,7 @@ dag = DAG(
     is_paused_upon_creation=False
 )
 
-_CONN_ID="cdw-impala"
+_CONN_ID="cdw"
 
 cdw_check_quotation_mark = """
 select
