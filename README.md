@@ -220,7 +220,7 @@ Scrol down to row 46
 | | numFiles| 14 |
 | :- | :- |:- |
 | | numPartitions| 14 |
-| | numRows| 86399321  |
+| | numRows| 86289323  |
 
  ```sql
 show partitions flights_orc;
@@ -481,7 +481,7 @@ Result:
 
 | row_count |
 | :- |
-| 5437433|
+| 5327435 |
 
 
 
@@ -524,7 +524,7 @@ Result: Only data from the first insert.
 
 |  row_count |
 | :- |
-| 2783584 |
+| 	2673586 |
 
 
 Partition Evolution is a feature when table layout can be updated as data or queries change and  users are not required to maintain partition columns.
@@ -854,8 +854,8 @@ Result: showing three newly delete files, one for every delete command.
 
 | content_type |	count_files	| total_file_size_mb | avg_file_size_mb |
 | :- | :- | :- | :- |
-| delete file	| 3	|  2.084	| 0.702 |
-| data file	| 5	|  127.447	| 25.741 |
+| delete file	| 6	| 2.09	| 0.352 |
+| data file	| 5	|  132.202 |	26.701 |
 
 Note: The delete files are very small because they only holding the position of the delete rows.
 
@@ -908,7 +908,7 @@ Group by content;
 
 | content_type |	count_files	| total_file_size_mb | avg_file_size_mb |
 | :- | :- | :- | :- |
-| data file	| 13	| 61.285	| 4.761 |
+| data file	| 13	| 	64.836 |	5.037|
 
 This shows only data files and all not more needed data in old snapshots are purged.
 
