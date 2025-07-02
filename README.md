@@ -1054,7 +1054,7 @@ Results
 
 |**Step**|**Description**|
 | :-: | :- |
-|1|<p>Open Data Visualization ![](images/cdw-lab9-00nav.png) ![](images/cdw-lab9-01nav.png)</p><p></p><p></p><p>SSO login as user with password (not prompted) </p><p></p>|
+|1|<p>Open Data Visualization ![](images/cdw-lab9-00nav.png) ![](images/cdw-lab9-01nav.png)</p><p></p><p></p><p></p><p></p>|
 |2|<p>Overview</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.017.png)</p>|
 |3|<p>Switch to Data Tab</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.018.png)</p><p>Initially will have no Data Models</p>|
 |4|<p>Build Data Model</p><p></p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.021.png)</p><p>Create the Semantic Layer - data is not copied</p>|
