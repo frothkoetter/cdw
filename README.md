@@ -1056,9 +1056,9 @@ Results
 | :-: | :- |
 |1|<p>Open Data Visualization ![](images/cdw-lab9-00nav.png) ![](images/cdw-lab9-01nav.png)</p><p></p><p></p><p></p><p></p>|
 |2|<p>Overview</p><p>![](images/cdw-lab9-02nav.png)</p>|
-|3|<p>Switch to Data Tab</p><p>![](images/cdw-lab9-03nav.png)</p><p>Initially will have no Data Models</p>|
-|4|<p>Build Data Model</p><p></p><p>![](images/cdw-lab9-04nav.png)</p><p>Create the Semantic Layer - data is not copied</p>|
-|5|<p>Select Table or use SQL</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.022.png)</p><p></p><p></p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.023.png)</p><p></p><p></p><p>     </p><p>Ability to add as a table or enter your own pre-defined SQL</p>|
+|3|<p>Switch to Data Tab</p><p>![](images/cdw-lab9-03nav.png)</p><p>There a demo datasets shown here (you can explore by your own)</p>|
+|4|<p>Build a new dataset for the airlinedata</p><p></p><p>![](images/cdw-lab9-04nav.png)</p><p>Create the Dataset </p>|
+|5|<p>enter a name: airline_logistics the select database: airlinedata and table: flights_orc and click CREATE</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.022.png)</p><p></p><p></p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.023.png)</p><p></p><p></p><p>     </p><p></p>|
 |6|<p>Edit Data Model</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.024.png)</p><p></p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.025.png)</p><p></p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.026.png)</p>|
 |7|<p>Show Fields quickly</p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.027.png)     ![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.028.png)</p><p></p><p>Can see that it created fields for each column in the table that was selected.</p><p></p>|
 |8|<p>Join Planes table with Flights table</p><p></p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.029.png)</p><p></p><p></p><p>![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.030.png)  </p><p></p><p></p><p>` `![](images/Aspose.Words.10bb90cf-0d99-47f3-a995-23ef2b90be86.031.png)</p>|
