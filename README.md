@@ -821,7 +821,7 @@ This lab you saw how Iceberg branching feature helping data quality pipelines in
 
 The next part is about Iceberg table maintenance
 
-We will delete rows for three months and change the partition schema before optimize the table.
+We will delete rows for three dayofmonth with three delete statements and change the partition schema before optimize the table.
 
 
 ```sql
