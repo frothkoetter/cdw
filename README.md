@@ -1233,11 +1233,11 @@ WHERE
 
 In HUE you can use a map features to show of the airport locations.
 
-[](images/geospatial-hue-marker-map.png)
+![](images/geospatial-hue-marker-map.png)
 
 Select correct field names for longitude and latitude and the output should look like this:
 
-[](images/geospatial-result-map.png)
+![](images/geospatial-result-map.png)
 
 
 ##  - Continues Data Pipeline (not setup be default)
