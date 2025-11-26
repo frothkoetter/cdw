@@ -1142,6 +1142,103 @@ This lineage graph shows the inputs, outputs as well as the processing steps res
 
 The red circle marks the currently selected entity. Atlas will always display the current entity's type in braces next to the entity name (middle, top of the page, e.g. "hive_table"). Clicking on one of the nodes will display a popup menu, which allows us to navigate through the lineage graph.
 
+##  - Geospatial Queries
+
+Exploring the geospatial functions of Hive that are based on the HIVE_ESRI framework.
+see: https://hive.apache.org/docs/latest/language/hive-udfs/#geospatial
+
+Start create a table of all counties in the US state California.
+
+```sql
+drop table if exists california_counties;
+CREATE EXTERNAL TABLE california_counties (
+        Area string,
+        Perimeter string,
+        State string,
+        County string,
+        Name string,
+        BoundaryShape binary)                  
+ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.udf.esri.serde.EsriJsonSerDe'
+STORED AS
+ INPUTFORMAT 'org.apache.hadoop.hive.ql.io.esriJson.EnclosedEsriJsonInputFormat'
+OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION '/airlinedata-csv/california_counties/';
+```
+Note: This table use a special libary of Esri_Json to transform GEOJSON format.
+
+Run query with a geospatial join that performs a spatial join between the "airports_orc" table and the "california_counties" table.
+
+It selects the county name, counts the total number of airports within each county, and calculates the minimum longitude and latitude values for each county. The join condition uses the ST_CONTAINS function to check if the county
+polygon contains the airport point by comparing the boundary shape of the county with the point created from the longitude and latitude of the airport.
+
+The result is grouped by county name and ordered by the total number of airports in descending order.
+
+```sql
+SELECT
+    cc.Name AS County_Name,
+    COUNT(ap.airport) AS Total_Airports,
+FROM
+    airports_orc ap -- Table of airport points
+JOIN
+    california_counties cc -- Table of county polygons
+ON
+    -- Spatial Join Condition: Checks if the county polygon contains the airport point
+    ST_CONTAINS(
+        cc.BoundaryShape,                      -- The county polygon (WKB/Binary)
+        ST_POINT(ap.lon, ap.lat)   -- Creates an ESRI Point from (Longitude, Latitude)
+    )
+GROUP BY
+    cc.Name
+ORDER BY
+    Total_Airports DESC;
+```
+
+Output:
+
+|Rank|County Name|Total Airports|
+| :- | :- | :- |
+|1|Los Angeles|15|
+|2|San Bernardino|14|
+|3|Kern|12|
+|4|Riverside|10|
+|5|San Diego|10|
+(more rows ... )
+
+The next SQL query joins the 'airports_orc' table with the 'california_counties'
+table based on the condition that the airport's coordinates fall within the boundary shape of a specific county (in this case, Los Angeles county).
+
+It uses the ST_CONTAINS function to check if the point created from the airport's latitude and longitude is contained within the county's boundary shape.
+
+```sql
+SELECT
+  cc.County,
+  ap.airport,
+  ap.city,
+  ap.iata,
+  ap.lon,
+  ap.lat
+FROM
+  airports_orc ap -- Airport points table
+  JOIN california_counties cc -- County polygon table
+  ON
+  -- 1. Create a point geometry from the airport's lat/lon
+  ST_CONTAINS (
+    cc.BoundaryShape, -- The county polygon (WKB/Binary)
+    ST_POINT (ap.lon, ap.lat) -- Create an ESRI Point object from the coordinates
+  )
+WHERE
+  cc.Name = 'Los Angeles' -- **Filter by the specific county name**
+;
+```
+
+In HUE you can use a map features to show of the airport locations.
+
+[](images/geospatial-hue-marker-map.png)
+
+Select correct field names for longitude and latitude and the output should look like this:
+
+[](images/geospatial-result-map.png)
+
 
 ##  - Continues Data Pipeline (not setup be default)
 
