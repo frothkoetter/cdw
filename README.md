@@ -22,16 +22,14 @@ Create new database for your user to be used, or use one that is already created
 
 ```sql
 -- 1. Create the schema in the Iceberg catalog
-CREATE SCHEMA iceberg.db_user0++;
+CREATE SCHEMA iceberg.db_user001;
 
 -- 2. Switch your session context to the Iceberg catalog and your new schema
-USE iceberg.db_user0**;
+USE iceberg.db_user001;
 
-```
-Your can check your current database
-```sql
 -- 3. Verify your context (should show 'iceberg' and 'db_user0')
 SELECT current_catalog, current_schema;
+
 ```
 -----
 ## Lab 2 - External Tables
