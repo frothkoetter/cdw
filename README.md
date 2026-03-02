@@ -37,31 +37,96 @@ SELECT current_catalog, current_schema;
 Run DDL to create four external tables on the CSV data files, which are already in cloud object storage.
 
 ```sql
-drop table if exists flights_csv;
-CREATE EXTERNAL TABLE flights_csv(month int, dayofmonth int,
- dayofweek int, deptime int, crsdeptime int, arrtime int,
- crsarrtime int, uniquecarrier string, flightnum int, tailnum string,
- actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int,
- depdelay int, origin string, dest string, distance int, taxiin int,
- taxiout int, cancelled int, cancellationcode string, diverted string,
- carrierdelay int, weatherdelay int, nasdelay int, securitydelay int,
-lateaircraftdelay int, year int)
-ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
-STORED AS TEXTFILE LOCATION '/airlinedata-csv/flights' tblproperties("skip.header.line.count"="1");
+-- 1. Planes Table
+DROP TABLE IF EXISTS hive.${your_dbname}.flights_csv;
+CREATE TABLE hive.${your_dbname}.flights_csv (
+    month VARCHAR,
+    dayofmonth VARCHAR,
+    dayofweek VARCHAR,
+    deptime VARCHAR,
+    crsdeptime VARCHAR,
+    arrtime VARCHAR,
+    crsarrtime VARCHAR,
+    uniquecarrier VARCHAR,
+    flightnum VARCHAR,
+    tailnum VARCHAR,
+    actualelapsedtime VARCHAR,
+    crselapsedtime VARCHAR,
+    airtime VARCHAR,
+    arrdelay VARCHAR,
+    depdelay VARCHAR,
+    origin VARCHAR,
+    dest VARCHAR,
+    distance VARCHAR,
+    taxiin VARCHAR,
+    taxiout VARCHAR,
+    cancelled VARCHAR,
+    cancellationcode VARCHAR,
+    diverted VARCHAR,
+    carrierdelay VARCHAR,
+    weatherdelay VARCHAR,
+    nasdelay VARCHAR,
+    securitydelay VARCHAR,
+    lateaircraftdelay VARCHAR,
+    year VARCHAR
+)
+WITH (
+    format = 'CSV',
+    csv_separator = ',',
+    external_location = 's3a://goes-se-sandbox/data/airlinedata-csv/flights',
+    skip_header_line_count = 1
+);
 
-drop table if exists planes_csv;
-CREATE EXTERNAL TABLE planes_csv(tailnum string, owner_type string, manufacturer string, issue_date string, model string, status string, aircraft_type string, engine_type string, year int)
-ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
-STORED AS TEXTFILE LOCATION '/airlinedata-csv/planes' tblproperties("skip.header.line.count"="1");
+-- 2. Planes Table
+DROP TABLE IF EXISTS hive.${your_dbname}.planes_csv;
+CREATE TABLE hive.${your_dbname}.planes_csv (
+    tailnum VARCHAR,
+    owner_type VARCHAR,
+    manufacturer VARCHAR,
+    issue_date VARCHAR,
+    model VARCHAR,
+    status VARCHAR,
+    aircraft_type VARCHAR,
+    engine_type VARCHAR,
+    year VARCHAR -- Changed from INTEGER to VARCHAR
+)
+WITH (
+    format = 'CSV',
+    csv_separator = ',',
+    external_location = 's3a://goes-se-sandbox/data/airlinedata-csv/planes',
+    skip_header_line_count = 1
+);
 
-drop table if exists airlines_csv;
-CREATE EXTERNAL TABLE airlines_csv(code string, description string) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
-STORED AS TEXTFILE LOCATION '/airlinedata-csv/airlines' tblproperties("skip.header.line.count"="1");
+-- 3. Airlines Table
+DROP TABLE IF EXISTS hive.${your_dbname}.airlines_csv;
+CREATE TABLE hive.${your_dbname}.airlines_csv (
+    code VARCHAR,
+    description VARCHAR
+)
+WITH (
+    format = 'CSV',
+    csv_separator = ',',
+    external_location = 's3a://goes-se-sandbox/data/airlinedata-csv/airlines',
+    skip_header_line_count = 1
+);
 
-drop table if exists airports_csv;
-CREATE EXTERNAL TABLE airports_csv(iata string, airport string, city string, state string, country string, lat DOUBLE, lon DOUBLE)
-ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
-STORED AS TEXTFILE LOCATION '/airlinedata-csv/airports' tblproperties("skip.header.line.count"="1");
+-- 4. Airports Table
+DROP TABLE IF EXISTS hive.${your_dbname}.airports_csv;
+CREATE TABLE hive.${your_dbname}.airports_csv (
+    iata VARCHAR,
+    airport VARCHAR,
+    city VARCHAR,
+    state VARCHAR,
+    country VARCHAR,
+    lat VARCHAR,
+    lon VARCHAR
+)
+WITH (
+    format = 'CSV',
+    csv_separator = ',',
+    external_location = 's3a://goes-se-sandbox/data/airlinedata-csv/airports',
+    skip_header_line_count = 1
+);
 
 ```
 
