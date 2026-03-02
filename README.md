@@ -16,7 +16,7 @@ Enitiy-Relation Diagram of tables we use in todays workshop:
 -----
 ## Lab 1 - Create Database
 
-Navigate to Data Warehouse, then Virtual Warehouse and open the HUE SQL Authoring tool.
+Navigate to Data Warehouse, then Trino Virtual Warehouse and open the HUE SQL Authoring tool.
 
 Create new database for your user to be used, or use one that is already created for you.
 
