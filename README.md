@@ -21,14 +21,17 @@ Navigate to Data Warehouse, then Trino Virtual Warehouse and open the HUE SQL Au
 Create new database for your user to be used, or use one that is already created for you.
 
 ```sql
--- Change *** of database name
-CREATE DATABASE DB_USER0**;
+-- 1. Create the schema in the Iceberg catalog
+CREATE SCHEMA iceberg.db_user0++;
 
-USE DB_USER0**;
+-- 2. Switch your session context to the Iceberg catalog and your new schema
+USE iceberg.db_user0**;
+
 ```
 Your can check your current database
 ```sql
-select current_database();
+-- 3. Verify your context (should show 'iceberg' and 'db_user0')
+SELECT current_catalog, current_schema;
 ```
 -----
 ## Lab 2 - External Tables
