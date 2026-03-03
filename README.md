@@ -311,7 +311,6 @@ This takes a few minutes to read and write the data back.
 Check that you created managed & external tables
 
 ```sql
-USE DB_USER0**;
 SHOW TABLES;
 ```
 
@@ -320,20 +319,19 @@ Results
 |TAB_NAME|
 | :- |
 |airlines_csv|
-|airlines_orc|
+|dim_airlines|
 |airports_csv|
-|airports_orc|
+|dim_airports|
 |flights_csv|
-|flights_orc|
+|fct_flights|
 |planes_csv|
-|planes_orc|
+|dim_planes|
 
-The DESCRIBE cmd shows detailed information about the table.
+The shows detailed information about the table.
 
  ```sql
 DESCRIBE iceberg.${your_dbname}.fct_flights ;
  ```
-
 Result: column names with types, parameters and storage
 
 |col_name| data_type| comment|
@@ -349,6 +347,8 @@ Show column statistics
 SHOW STATS FOR iceberg.${your_dbname}.fct_flights;
  ```
 
+Result: column data statistics
+
 |#|column_name|data_size|distinct_values_count|nulls_fraction|row_count|low_value|high_value|
 | :- |:- |:- |:- |:- |:- |:- |:- |
 |1|year|NULL|14|0|NULL|1995|2008|
@@ -360,17 +360,29 @@ SHOW STATS FOR iceberg.${your_dbname}.fct_flights;
 ...
 
  ```sql
-show partitions flights_orc;
+ SELECT partition, record_count, file_count, total_size   
+ FROM iceberg.${your_dbname}."fct_flights$partitions"
+ ORDER BY partition;
  ```
 Result: showing all 14 partitions with keys
 
-| partition |
-| :- |
-|year=1995|
-|year=1996|
-|year=1997|
-|...|
-|year=2008|
+|partition |      record_count|    file_count   |   total_size|
+| :- |:- |:- |:- |
+|[1995] | 5327435 |7      | 57774143|
+|[1996] | 5351983 |7      | 58347109|
+|[1997] | 5411843 |7      | 59631458|
+|[1998] | 5384721 |6      | 59213838|
+|[1999] | 5527884 |7      | 61922778|
+|[2000] | 5683047 |7      | 64065106|
+|[2001] | 5967780 |8      | 67177068|
+|[2002] | 5271359 |7      | 62869905|
+|[2003] | 6488540 |8      | 88406053|
+|[2004] | 7129270 |9      | 110097503|
+|[2005] | 7140596 |9      | 109736198|
+|[2006] | 7141922 |9      | 113833004|
+|[2007] | 7453215 |8      | 118620089|
+|[2008] | 7009728 |8      | 114092417|
+
 
 Experiment with different queries to see effects of the columnar storage format and cache.
 
@@ -517,26 +529,30 @@ Materialized views (MV) cause Hive to transparently rewrite queries, when possib
 Create Materialized View of a join of two tables with aggregation.
 
 ```sql
-DROP MATERIALIZED VIEW IF EXISTS traffic_cancel_airlines;
+-- 1. Trino uses the same DROP syntax
+DROP MATERIALIZED VIEW IF EXISTS iceberg.${your_dbname}.traffic_cancel_airlines;
 
-CREATE MATERIALIZED VIEW
- traffic_cancel_airlines
+-- 2. Create the Materialized View in the Iceberg catalog
+CREATE MATERIALIZED VIEW iceberg.${your_dbname}.traffic_cancel_airlines
 AS SELECT
- airlines.code AS code,  
- airlines.description AS airline_name,
- flights.month AS month,
- COUNT(*) as flights_count,
- SUM(flights.cancelled) AS cancelled,
- SUM( nvl(depdelay,0) ) AS departure_delay_minutes,
- SUM( case when nvl(depdelay,0) > 0 then 1 end) as departure_delay_count
+    airlines.code AS code,  
+    airlines.description AS airline_name,
+    flights.month AS month,
+    COUNT(*) as flights_count,
+    SUM(flights.cancelled) AS cancelled,
+    -- Using COALESCE instead of NVL
+    SUM(COALESCE(depdelay, 0)) AS departure_delay_minutes,
+    -- Standardizing the CASE/SUM logic
+    SUM(CASE WHEN COALESCE(depdelay, 0) > 0 THEN 1 ELSE 0 END) as departure_delay_count
 FROM
- flights_orc flights
- JOIN
-  airlines_orc airlines ON (flights.uniquecarrier = airlines.code)
-group by
- airlines.code,
- airlines.description,
- flights.month;
+    iceberg.${your_dbname}.fct_flights flights
+JOIN
+    iceberg.${your_dbname}.dim_airlines airlines
+    ON flights.uniquecarrier = airlines.code
+GROUP BY
+    airlines.code,
+    airlines.description,
+    flights.month;
 ```
 Note: The time to create the MV takes apporox. 3-5 minutes.
 
@@ -556,20 +572,37 @@ Running a query for part of the materialized view.
 
 ```sql
 SELECT
- airlines.description AS description,
- SUM(flights.cancelled) AS flights_cancelled
+  airlines.description AS description,
+  SUM(flights.cancelled) AS flights_cancelled
 FROM
- flights_orc flights ,
- airlines_orc airlines
-WHERE
- flights.uniquecarrier = airlines.code
-group by
- airlines.description;
+  iceberg.${your_dbname}.fct_flights flights
+JOIN
+  iceberg.${your_dbname}.dim_airlines airlines
+  ON flights.uniquecarrier = airlines.code
+GROUP BY
+  airlines.description;
+```  
+
+Explain if query is optimzed .
+
+```sql
+
+EXPLAIN ANALYZE
+SELECT
+  airlines.description AS description,
+  SUM(flights.cancelled) AS flights_cancelled
+FROM
+  iceberg.${your_dbname}.fct_flights flights
+JOIN
+  iceberg.${your_dbname}.dim_airlines airlines
+  ON flights.uniquecarrier = airlines.code
+GROUP BY
+  airlines.description;
 ```
-
-Navigate to the query processor, select the above query and the visual explain you see query rewrite:
-
-![](images/image005.png)
+Output:
+```
+----
+```
 
 
 ------
@@ -673,15 +706,27 @@ With Iceberg’s hidden partitions the tables separation between physical and lo
 Lets change the partition schema to YEAR & MONTH & DAYOFMONTH
 
 ```sql
-alter table flights_ice SET PARTITION SPEC (year ,month, dayofmonth);
+-- Create a sandbox table for the year 1995
+CREATE TABLE iceberg.${your_dbname}.flights_history_lab
+WITH (format = 'PARQUET')
+AS
+SELECT * FROM iceberg.${your_dbname}.fct_flights
+WHERE year = 1995 AND month <= 6;
+
+-- Insert a second batch of data (This creates a second snapshot)
+INSERT INTO iceberg.${your_dbname}.flights_history_lab
+SELECT * FROM iceberg.${your_dbname}.fct_flights
+WHERE year = 1995 AND month > 6;
 ```
 
-Now let's insert one day of data into the partitioned table:
+See the
 ```sql
-insert into flights_ice (year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay,origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay,nasdelay, securitydelay, lateaircraftdelay )
-select 2023, 1, 1 , dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay
-from flights_orc where year = 1995 and month = 1 and dayofmonth = 1;
+-- View the snapshots and timestamps
+SELECT snapshot_id, parent_id, operation, committed_at
+FROM iceberg.${your_dbname}."flights_history_lab$snapshots";
 ```
+
+
 Now lets see the impact what the difference is, lets run two queries and note the complete time:
 
 Count the records for one year and month that is inserted before the partition:
