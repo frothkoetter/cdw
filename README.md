@@ -154,7 +154,7 @@ Query external tables to see few samples pointing to the right files
 SELECT
   *
 FROM  
-  airports_csv
+  hive.${your_dbname}.airports_csv
 LIMIT 3;
 ```
 
@@ -163,7 +163,7 @@ Results
 
 |airports_csv.iata | airports_csv.airport |airports_csv.city |airports_csv.country |airports_csv.lat| airports_csv.lon|
 | :- | :- | :- | :- | :- | :- |
-|00M	|"Thigpen "	|Bay Springs |USA	|31.95376472	|-89.23450472 |
+|00M	|Thigpen	|Bay Springs |USA	|31.95376472	|-89.23450472 |
 |00R	|Livingston Municipal	|Livingston |USA	|30.68586111	|-95.0179277 |
 |00V	|Meadow Lake |Colorado Springs |USA	|38.94574889	|-104.5698933 |
 
@@ -180,14 +180,18 @@ DESCRIPTION: Customer Experience Reporting showing airplanes that have the highe
 SELECT
   tailnum,
   count(*) as flights_count,
-  sum( nvl(depdelay,0) ) AS departure_delay_minutes,
-  sum( case when nvl(depdelay,0) > 0 then 1 end) as departure_delay_count
+  -- 1. NULLIF turns '' into NULL
+  -- 2. CAST turns NULL (or the string) into an INTEGER
+  -- 3. COALESCE turns that resulting NULL into 0
+  sum(coalesce(cast(nullif(depdelay, '') as integer), 0)) AS departure_delay_minutes,
+
+  sum(case when coalesce(cast(nullif(depdelay, '') as integer), 0) > 0 then 1 else 0 end) as departure_delay_count
 FROM
-  flights_csv
+  hive.${your_dbname}.flights_csv
 GROUP BY
   tailnum
 ORDER BY
- departure_delay_minutes DESC
+  departure_delay_minutes DESC
 LIMIT 5;
 ```
 Note: Running the first time may take some time.
@@ -221,26 +225,84 @@ The SQL AI Assistant will take a few seconds to generate a outcome.
 This can be inserted for documentation purposes.
 
 -----
-## Lab 3 - Managed Tables
+## Lab 3 - Iceberg Tables
 
 Run “CREATE TABLE AS SELECT” queries to create full ACID ORC type of the tables. This creates curated versions of the data which are optimal for BI usage.
 
-*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
+*Do all these steps in * **“iceberg.db\_user001”..”db\_user020”** *unless otherwise noted.*
 
 ```sql
-drop table if exists airlines_orc;
-create table airlines_orc as select * from airlines_csv;
+-- 1. Airlines Table
+DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines;
+CREATE TABLE iceberg.${your_dbname}.dim_airlines
+WITH (format = 'PARQUET')
+AS
+SELECT
+    code,
+    description
+FROM hive.${your_dbname}.airlines_csv;
 
-drop table if exists airports_orc;
-create table airports_orc as select * from airports_csv;
+-- 2. Airports Table
+DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airports;
+CREATE TABLE iceberg.${your_dbname}.dim_airports
+WITH (format = 'PARQUET')
+AS
+SELECT
+    iata, airport, city, state, country,
+    CAST(NULLIF(lat, '') AS DOUBLE) as lat,
+    CAST(NULLIF(lon, '') AS DOUBLE) as lon
+FROM hive.${your_dbname}.airports_csv;
 
-drop table if exists planes_orc;
-create table planes_orc as select * from planes_csv;
+-- 3. Planes Table
+DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_planes;
+CREATE TABLE iceberg.${your_dbname}.dim_planes
+WITH (format = 'PARQUET')
+AS
+SELECT
+    tailnum, owner_type, manufacturer, issue_date, model,
+    status, aircraft_type, engine_type,
+    CAST(NULLIF(year, '') AS INTEGER) as year
+FROM hive.${your_dbname}.planes_csv;
 
-drop table if exists flights_orc;
-create table flights_orc partitioned by (year) as
-select year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay
-from flights_csv;
+-- 4. Flights Table (Partitioned by Year)
+DROP TABLE IF EXISTS iceberg.${your_dbname}.fct_flights;
+CREATE TABLE iceberg.${your_dbname}.fct_flights
+WITH (
+    format = 'PARQUET',
+    partitioning = ARRAY['year']
+)
+AS
+SELECT
+    CAST(NULLIF(year, '') AS INTEGER) as year,
+    CAST(NULLIF(month, '') AS INTEGER) as month,
+    CAST(NULLIF(dayofmonth, '') AS INTEGER) as dayofmonth,
+    CAST(NULLIF(dayofweek, '') AS INTEGER) as dayofweek,
+    CAST(NULLIF(deptime, '') AS INTEGER) as deptime,
+    CAST(NULLIF(crsdeptime, '') AS INTEGER) as crsdeptime,
+    CAST(NULLIF(arrtime, '') AS INTEGER) as arrtime,
+    CAST(NULLIF(crsarrtime, '') AS INTEGER) as crsarrtime,
+    uniquecarrier,
+    CAST(NULLIF(flightnum, '') AS INTEGER) as flightnum,
+    tailnum,
+    CAST(NULLIF(actualelapsedtime, '') AS INTEGER) as actualelapsedtime,
+    CAST(NULLIF(crselapsedtime, '') AS INTEGER) as crselapsedtime,
+    CAST(NULLIF(airtime, '') AS INTEGER) as airtime,
+    CAST(NULLIF(arrdelay, '') AS INTEGER) as arrdelay,
+    CAST(NULLIF(depdelay, '') AS INTEGER) as depdelay,
+    origin,
+    dest,
+    CAST(NULLIF(distance, '') AS INTEGER) as distance,
+    CAST(NULLIF(taxiin, '') AS INTEGER) as taxiin,
+    CAST(NULLIF(taxiout, '') AS INTEGER) as taxiout,
+    CAST(NULLIF(cancelled, '') AS INTEGER) as cancelled,
+    cancellationcode,
+    diverted,
+    CAST(NULLIF(carrierdelay, '') AS INTEGER) as carrierdelay,
+    CAST(NULLIF(weatherdelay, '') AS INTEGER) as weatherdelay,
+    CAST(NULLIF(nasdelay, '') AS INTEGER) as nasdelay,
+    CAST(NULLIF(securitydelay, '') AS INTEGER) as securitydelay,
+    CAST(NULLIF(lateaircraftdelay, '') AS INTEGER) as lateaircraftdelay
+FROM hive.${your_dbname}.flights_csv;
 
 ```
 
@@ -269,7 +331,7 @@ Results
 The DESCRIBE cmd shows detailed information about the table.
 
  ```sql
- DESCRIBE formatted flights_orc ;
+DESCRIBE iceberg.${your_dbname}.fct_flights ;
  ```
 
 Result: column names with types, parameters and storage
@@ -281,12 +343,21 @@ Result: column names with types, parameters and storage
 |dayofweek| int| |
 ...
 
-Scrol down to row 46
+Show column statistics
 
-| | numFiles| 14 |
-| :- | :- |:- |
-| | numPartitions| 14 |
-| | numRows| 86289323  |
+ ```sql
+SHOW STATS FOR iceberg.${your_dbname}.fct_flights;
+ ```
+
+|#|column_name|data_size|distinct_values_count|nulls_fraction|row_count|low_value|high_value|
+| :- |:- |:- |:- |:- |:- |:- |:- |
+|1|year|NULL|14|0|NULL|1995|2008|
+|2|month|NULL|12|0|NULL|1|12|
+|3|dayofmonth|NULL|31|0|NULL|1|31|
+|4|dayofweek|NULL|7|0|NULL|1|7|
+|5|deptime|NULL|1619|0.0218189|NULL|1|2318|
+|6|crsdeptime|NULL|1293|0|NULL|1|1927|
+...
 
  ```sql
 show partitions flights_orc;
