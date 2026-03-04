@@ -590,10 +590,9 @@ FROM iceberg.${your_dbname}."fct_flights_history_lab$snapshots";
 Output:
 
 | snapshot_id |	parent_id	| operation	| committed_at |
-| :- | :- | :- | :- | :- |
+| :- | :- | :- | :- |
 | 2276194921605653543 |	NULL |	append |	2026-03-04 12:50:46.050 UTC |
 | 4971137753967299831 |	2276194921605653543	|append	|2026-03-04 12:52:00.308 UTC |
-
 
 Time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME.
 
