@@ -1,8 +1,8 @@
 
 
-# CDW Workshops - vHoL  
+# CDW Workshops - Hands on Workshop
 
-Analyze Stored Data
+Analyze Stored Data with Trino and Iceberg
 
 ## Introduction
 This workshop gives you an overview of how to use the Cloudera Data Warehouse service to quickly explore raw data, create curated versions of the data for reporting and dashboarding, and then scale up usage of the curated data by exposing it to more users. It highlights the performance and automation capabilities that help ensure performance is maintained while controlling cost.  
@@ -504,13 +504,11 @@ SELECT * FROM iceberg.${your_dbname}.airlines_with_seq ORDER BY id LIMIT 3;
 
 Result:
 
-|id	| code |	 description|
+|id	| code | description|
 | :- | :- | :- |
 |1 |02Q |Titan Airways |
 |2 |04Q |Tradewind Aviation |
 |3 |05Q |Comlux Aviation |
-
------
 
 ------
 ## Lab 4 - Time Travel and Partition Evolution
@@ -565,10 +563,10 @@ FROM iceberg.${your_dbname}."fct_flights_history_lab$snapshots";
 ```
 Output:
 
-|snapshot_id |	parent_id	| operation	| committed_at |
+| snapshot_id |	parent_id	| operation	| committed_at |
 | :- | :- | :- | :- | :- |
-|2276194921605653543 |	NULL |	append |	2026-03-04 12:50:46.050 UTC |
-|4971137753967299831 |	2276194921605653543	|append	|2026-03-04 12:52:00.308 UTC |
+| 2276194921605653543 |	NULL |	append |	2026-03-04 12:50:46.050 UTC |
+| 4971137753967299831 |	2276194921605653543	|append	|2026-03-04 12:52:00.308 UTC |
 
 
 Time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME.
