@@ -392,14 +392,16 @@ QUERY: Airline Delay Aggregate Metrics by Airplane on managed table
 SELECT
   tailnum,
   count(*) as flights_count,
-  sum( nvl(depdelay,0) ) AS departure_delay_minutes,
-  sum( case when nvl(depdelay,0) > 0 then 1 end) as departure_delay_count
+  -- COALESCE is the Trino/Standard SQL
+  sum(coalesce(depdelay, 0)) AS departure_delay_minutes,
+  -- Adding ELSE 0 ensures the SUM handles non-matches as zero
+  sum(case when coalesce(depdelay, 0) > 0 then 1 else 0 end) as departure_delay_count
 FROM
-  flights_orc
+  iceberg.${your_dbname}.fct_flights
 GROUP BY
   tailnum
 ORDER BY
- departure_delay_minutes DESC
+  departure_delay_minutes DESC
 LIMIT 5;
 ```
 
@@ -412,39 +414,29 @@ Results (same as previous query)
 |N366UA	| 24808 |331318	| 12113	|
 |N377UA	| 25105 |328546	| 12163	|
 
-Now let's compare this query select flights_orc managed table with the previous query for the flights_csv external table.
-
-The Hive Query Processors can compare the queries. You navigate to the Query Processor via on the left side you click on Jobs, next is to click on Queries.
-
-Next is to select the two queries, hoover over the SQL command and search the FROM clause with flights_csv and flights_orc.
-
-When you found the SQL queries next is to check the box to click compare.
-
-Here you see the two queries side-by-side with all details.
-![](images/image002.png)
 
 Query: Find all international flights: flights where destination airport country is not the same as origin airport country
 
 ```sql
 SELECT DISTINCT
-   flightnum,
-   uniquecarrier,
-   origin,
-   dest,
-   month,
-   dayofmonth,
-   `dayofweek`
+    f.flightnum,
+    f.uniquecarrier,
+    f.origin,
+    f.dest,
+    f.month,
+    f.dayofmonth,
+    f."dayofweek" -- Trino uses double quotes for reserved keywords
 FROM
-  flights_orc f,
-   airports_orc oa,
-   airports_orc da  
+    iceberg.${your_dbname}.fct_flights f
+JOIN
+    iceberg.${your_dbname}.dim_airports oa ON f.origin = oa.iata
+JOIN
+    iceberg.${your_dbname}.dim_airports da ON f.dest = da.iata
 WHERE
-   f.origin = oa.iata
-   and f.dest = da.iata
-   And oa.country <> da.country
+    oa.country <> da.country
 ORDER BY
-   month ASC,
-   dayofmonth ASC;
+    f.month ASC,
+    f.dayofmonth ASC;
 ```
 
 
@@ -454,25 +446,22 @@ ORDER BY
 Surrogate keys are easy & distributable & fast, but not in sequence, has gaps.
 
 ```sql
-DROP TABLE IF EXISTS airlines_with_surrogate_key;
+DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines_with_surrogate_key;
 
-CREATE TABLE
-  airlines_with_surrogate_key (
-    ID BIGINT DEFAULT SURROGATE_KEY(),
-    CODE STRING,
-    DESCRIPTION STRING);
+CREATE TABLE iceberg.${your_dbname}.dim_airlines_with_surrogate_key (
+    -- Generates a 128-bit unique identifier string
+    id VARCHAR,
+    code VARCHAR,
+    description VARCHAR
+);
 
-INSERT INTO airlines_with_surrogate_key (CODE, DESCRIPTION)
-SELECT
-  code,
-  description
-FROM
-  airlines_csv;
+INSERT INTO iceberg.${your_dbname}.dim_airlines_with_surrogate_key (id, code, description)
+SELECT cast( uuid() as varchar), code, description FROM hive.${your_dbname}.airlines_csv;
 
 SELECT
  *
 FROM  
- airlines_with_surrogate_key
+ iceberg.${your_dbname}.dim_airlines_with_surrogate_key
 ORDER BY
  id
 LIMIT 3;
@@ -482,34 +471,35 @@ Result:
 
 |id	| code |	 description|
 | :- | :- | :- |
-|1099511627776 |02Q |Titan Airways |
-|1099511627777 |04Q |Tradewind Aviation |
-|1099511627778 |05Q |"Comlux Aviation |
+|0089fbea-c17d-4754-88e3-a9aa391bd45a	| AC |	Air Canada |
+|009d2fa7-41f5-4fd0-88c7-74303407fe31 |	BAC	| Business Aircraft Corp. |
+|0103f5b3-d9be-455e-ab9d-0dcb2531196a	| ECR	| East Coast Airways |
 
 Note: the first column is the new unique SURROGATE_KEY
 
 ### Optional Step - Create a SEQUENCE
 
 ```sql
-CREATE TABLE AIRLINES_with_SEQ (
- ID BIGINT,
- CODE STRING,
- DESCRIPTION STRING);
+-- 1. Create the target table structure
+DROP TABLE IF EXISTS iceberg.${your_dbname}.airlines_with_seq;
 
-INSERT INTO AIRLINES_with_SEQ (
-  ID, CODE, DESCRIPTION)
- SELECT
-  row_number() over(),
-  CODE,
-  DESCRIPTION
- from
-  AIRLINES_CSV;
+CREATE TABLE iceberg.${your_dbname}.airlines_with_seq (
+    id BIGINT,
+    code VARCHAR,
+    description VARCHAR
+);
 
-select
- *
-from
- AIRLINES_with_SEQ
-limit 3;
+-- 2. Insert with a gapless sequence
+INSERT INTO iceberg.${your_dbname}.airlines_with_seq (id, code, description)
+SELECT
+    row_number() OVER () AS id, -- This generates the gapless 1, 2, 3...
+    code,
+    description
+FROM
+    iceberg.${your_dbname}.airlines_csv;
+
+-- 3. Verify
+SELECT * FROM iceberg.${your_dbname}.airlines_with_seq ORDER BY id LIMIT 3;
 ```
 
 Result:
@@ -518,95 +508,12 @@ Result:
 | :- | :- | :- |
 |1 |02Q |Titan Airways |
 |2 |04Q |Tradewind Aviation |
-|3 |05Q |"Comlux Aviation |
+|3 |05Q |Comlux Aviation |
 
 -----
-## Lab 4 - Materialized View
-Reminder: use your own “db\_user001”..”db\_user020” database.
-
-Materialized views (MV) cause Hive to transparently rewrite queries, when possible, to use the MV instead of the base tables.
-
-Create Materialized View of a join of two tables with aggregation.
-
-```sql
--- 1. Trino uses the same DROP syntax
-DROP MATERIALIZED VIEW IF EXISTS iceberg.${your_dbname}.traffic_cancel_airlines;
-
--- 2. Create the Materialized View in the Iceberg catalog
-CREATE MATERIALIZED VIEW iceberg.${your_dbname}.traffic_cancel_airlines
-AS SELECT
-    airlines.code AS code,  
-    airlines.description AS airline_name,
-    flights.month AS month,
-    COUNT(*) as flights_count,
-    SUM(flights.cancelled) AS cancelled,
-    -- Using COALESCE instead of NVL
-    SUM(COALESCE(depdelay, 0)) AS departure_delay_minutes,
-    -- Standardizing the CASE/SUM logic
-    SUM(CASE WHEN COALESCE(depdelay, 0) > 0 THEN 1 ELSE 0 END) as departure_delay_count
-FROM
-    iceberg.${your_dbname}.fct_flights flights
-JOIN
-    iceberg.${your_dbname}.dim_airlines airlines
-    ON flights.uniquecarrier = airlines.code
-GROUP BY
-    airlines.code,
-    airlines.description,
-    flights.month;
-```
-Note: The time to create the MV takes apporox. 3-5 minutes.
-
-Checking that the materialized view is created.
-
-```sql
-SHOW MATERIALIZED VIEWS;
-```
-
-Results
-
-|MV_NAME | REWRITE_ENABLED |  MODE  | incremental_rebuild |
-| :- | :- | :- | :- |
-|traffic_cancel_airlines|Yes	| Manual refresh | Available |
-
-Running a query for part of the materialized view.
-
-```sql
-SELECT
-  airlines.description AS description,
-  SUM(flights.cancelled) AS flights_cancelled
-FROM
-  iceberg.${your_dbname}.fct_flights flights
-JOIN
-  iceberg.${your_dbname}.dim_airlines airlines
-  ON flights.uniquecarrier = airlines.code
-GROUP BY
-  airlines.description;
-```  
-
-Explain if query is optimzed .
-
-```sql
-
-EXPLAIN ANALYZE
-SELECT
-  airlines.description AS description,
-  SUM(flights.cancelled) AS flights_cancelled
-FROM
-  iceberg.${your_dbname}.fct_flights flights
-JOIN
-  iceberg.${your_dbname}.dim_airlines airlines
-  ON flights.uniquecarrier = airlines.code
-GROUP BY
-  airlines.description;
-```
-Output:
-```
-----
-```
-
 
 ------
-## Lab 5 - Time Travel and Partition Evolution
+## Lab 4 - Time Travel and Partition Evolution
 
 Apache Iceberg is a high-performance format for huge analytic tables for engines like Spark, Impala Flink and Hive to safely work with the same tables, at the same time.
 
@@ -615,97 +522,8 @@ Creating a partitioned table with CREATE TABLE ... PARTITIONED BY & STORED BY IC
 Lets create a new table with Iceberg format and insert rows in batches:
 
 ```sql
-drop table if exists flights_ice;
-create table flights_ice(
- year int, month int, dayofmonth int,  
- dayofweek int, deptime int, crsdeptime int, arrtime int,  
- crsarrtime int, uniquecarrier string, flightnum int, tailnum string,  
- actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int,  
- depdelay int, origin string, dest string, distance int, taxiin int,  
- taxiout int, cancelled int, cancellationcode string, diverted string,  
- carrierdelay int, weatherdelay int, nasdelay int, securitydelay int,  
- lateaircraftdelay int )
- stored by ICEBERG;
+DROP TABLE IF EXISTS iceberg.${your_dbname}.fct_flights_history_lab;
 
-insert into flights_ice (year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay,origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay,nasdelay, securitydelay, lateaircraftdelay )
-select year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay
-from flights_orc where year = 1995 and month <= 6;
-
-insert into flights_ice (year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay,origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay,nasdelay, securitydelay, lateaircraftdelay )
-select year,month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime, uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime, arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled, cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay, securitydelay, lateaircraftdelay
-from flights_orc where year = 1995 and month > 6;
-```
-
-Now all rows for one year inserted into the table flights_ice.
-
-Check the count of all rows inserted previouly:
-
-```sql
-select
- count(*) row_count
-from
- flights_ice;
-```
-
-Result:
-
-| row_count |
-| :- |
-| 5327435 |
-
-
-
-*Enter the your_dbname as **“db\_user001”..”db\_user020”** in this HUE parameter field
-
-![](images/cdw-lab5-para01.png)
-
-Now select the snapshot history of the table.
-
-```sql
-select * from ${your_dbname}.flights_ice.history;
-```
-
-Result: two snapshots of the table in the output, one for each insert command.
-
-|FLIGHTS.MADE_CURRENT_AT |	FLIGHTS_ICE.SNAPSHOT_ID	|FLIGHTS.PARENT_ID	|FLIGHTS.IS_CURRENT_ANCESTOR|
-| :- | :- | :- | :- |
-2022-05-01 09:29:12.509 Z|	7097750832501567062 | null | true |
-2022-05-01 09:56:21.464 Z|	5696129515471947086 | 7097750832501567062 | true |
-
-
-Let's make a quick time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME.
-
-Pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace ***SNAPSHOT_ID***
-
-```sql
-select
- count(*) as row_count
-from
- flights_ice
-FOR
- SYSTEM_VERSION AS OF ***SNAPSHOT_ID***
-group by
- year
-order by
- year;
-```
-
-Result: Only data from the first insert.
-
-|  row_count |
-| :- |
-| 	2673586 |
-
-
-Partition Evolution is a feature when table layout can be updated as data or queries change and  users are not required to maintain partition columns.
-
-![](images/IcebergPartitionEvo.png)
-
-With Iceberg’s hidden partitions the tables separation between physical and logical users avoid reading unnecessary partitions and don’t need to know how the table is partitioned and add extra filters to their queries.
-
-Lets change the partition schema to YEAR & MONTH & DAYOFMONTH
-
-```sql
 -- Create a sandbox table for the year 1995
 CREATE TABLE iceberg.${your_dbname}.flights_history_lab
 WITH (format = 'PARQUET')
@@ -717,48 +535,142 @@ WHERE year = 1995 AND month <= 6;
 INSERT INTO iceberg.${your_dbname}.flights_history_lab
 SELECT * FROM iceberg.${your_dbname}.fct_flights
 WHERE year = 1995 AND month > 6;
+
 ```
 
-See the
+Now all rows for one year inserted into the table fct_flights_history_lab.
+
+Check the count of all rows inserted previouly:
+
+```sql
+select
+ count(*) row_count
+from
+ iceberg.${your_dbname}.flights_history_lab;
+```
+
+Result:
+
+| row_count |
+| :- |
+| 5327435 |
+
+
+Now see the snapshots of the table.
+
 ```sql
 -- View the snapshots and timestamps
 SELECT snapshot_id, parent_id, operation, committed_at
-FROM iceberg.${your_dbname}."flights_history_lab$snapshots";
+FROM iceberg.${your_dbname}."fct_flights_history_lab$snapshots";
+```
+Output:
+
+|snapshot_id |	parent_id	| operation	| committed_at |
+| :- | :- | :- | :- | :- |
+|2276194921605653543 |	NULL |	append |	2026-03-04 12:50:46.050 UTC |
+|4971137753967299831 |	2276194921605653543	|append	|2026-03-04 12:52:00.308 UTC |
+
+
+Time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME.
+
+Pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace ***SNAPSHOT_ID***
+
+```sql
+SELECT
+    year,
+    month,
+    count(*) as row_count
+FROM
+    iceberg.${your_dbname}.fct_flights_history_lab
+FOR VERSION AS OF *************** -- Use SNAPSHOT_ID
+GROUP BY
+    year,month
+ORDER BY
+    year, month;
 ```
 
+Result: Only data from the first insert Year: 1995 Months 1-6
+
+|year	| month	|row_count |
+| :- | :- | :- |
+|1995	| 1	| 464933 |
+|1995	| 2	| 418312 |
+|1995	| 3	| 461503 |
+|1995	| 4	| 441074 |
+|1995	| 5	| 448341 |
+|1995	| 6	| 439423 |
+
+
+Partition Evolution is a feature when table layout can be updated as data or queries change and  users are not required to maintain partition columns.
+
+![](images/IcebergPartitionEvo.png)
+
+With Iceberg’s hidden partitions the tables separation between physical and logical users avoid reading unnecessary partitions and don’t need to know how the table is partitioned and add extra filters to their queries.
+
+Lets change the partition schema to YEAR & MONTH & DAYOFMONTH and insert data of *ONE* day
+
+```sql
+-- Trino uses the ALTER TABLE SET PROPERTIES syntax for Iceberg evolution
+ALTER TABLE iceberg.${your_dbname}.fct_flights_history_lab
+SET PROPERTIES partitioning = ARRAY['year', 'month', 'dayofmonth'];
+
+INSERT INTO iceberg.${your_dbname}.fct_flights_history_lab (
+    year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,
+    uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime,
+    arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled,
+    cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay,
+    securitydelay, lateaircraftdelay
+)
+SELECT
+    2026, 1, 1, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,
+    uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime,
+    arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled,
+    cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay,
+    securitydelay, lateaircraftdelay
+FROM
+    iceberg.${your_dbname}.fct_flights
+WHERE
+    year = 1995 AND month = 1 AND dayofmonth = 1;
+```
+Output:
+| row_count |
+| :- |
+| 14175 |
 
 Now lets see the impact what the difference is, lets run two queries and note the complete time:
 
 Count the records for one year and month that is inserted before the partition:
 ```sql
-select
-  count(1) as row_count,
-  sum(depdelay)
-from
-  flights_ice
-where  
-  year = 1995 and month = 1 and dayofmonth = 1;
+-- Query 1: Data from the first insert (Older partition spec)
+EXPLAIN ANALYZE
+SELECT
+    count(*) as row_count,
+    sum(depdelay) as total_dep_delay
+FROM
+    iceberg.${your_dbname}.flights_ice
+WHERE  
+    year = 1995 AND month = 1 AND dayofmonth = 1;
 ```
 
-Run the second query for the data last inserted into the partition:
 ```sql
-select
-count(1) as row_count,
-sum(depdelay)
-from
-  flights_ice
-where  
-  year = 2023 and month = 1 and dayofmonth = 1;
+-- Query 2: Data from the second insert (Newer evolved partition)
+EXPLAIN ANALYZE
+SELECT
+    count(*) as row_count,
+    sum(depdelay) as total_dep_delay
+FROM
+    iceberg.${your_dbname}.fct_flights_history_lab
+WHERE  
+    year = 2026 AND month = 1 AND dayofmonth = 1;
  ```
+This comparison perfectly illustrates the performance benefits of Iceberg Partition Evolution. In the second plan, the data was written after the partition spec was made more granular, while the first plan shows a query hitting data written before the evolution.
 
-You can compare the two queries in the HUE Query Processor tool. The second query has reads only the small partitioned file and you notice the difference in the DAG Swimlane tab:
-
-![](images/image0252.png)
-
-More details on the DAG Counter tab:
-
-![](images/image0251.png)
-Note: check on Hide Equal Values to see only changed values
+ | Metric | Query 2 (Year 2026) | Query 1 (Year 1995) |
+ | Total Execution Time | 214.92 ms 🚀 | 385.49 ms 🐢 |
+ | Rows Scanned (Input) | "14,175 rows" | "2,673,586 rows" |
+ | Physical Input Size | 257.18 kB | 5.08 MB |
+ | Filter Efficiency | 0% Filtered (Direct hit) | 99.47% Filtered (Over-scan) |
+ | Physical Input Time | 637.51 μs | 284.63 ms |
 
 This example shows that the execution time is greatly decreased because less data was read.
 
@@ -1094,7 +1006,91 @@ Group by content;
 
 This shows only data files and all not more needed data in old snapshots are purged.
 
------
+## Lab 7 - Materialized View
+Reminder: use your own “db\_user001”..”db\_user020” database.
+
+Materialized views (MV) cause Trino to transparently rewrite queries, when possible, to use the MV instead of the base tables.
+
+Create Materialized View of a join of two tables with aggregation.
+
+```sql
+-- 1. DROP MV if exists
+DROP MATERIALIZED VIEW IF EXISTS iceberg.${your_dbname}.traffic_cancel_airlines;
+
+-- 2. Create the Materialized View in the Iceberg catalog
+CREATE MATERIALIZED VIEW iceberg.${your_dbname}.traffic_cancel_airlines
+AS SELECT
+    airlines.code AS code,  
+    airlines.description AS airline_name,
+    flights.month AS month,
+    COUNT(*) as flights_count,
+    SUM(flights.cancelled) AS cancelled,
+    -- Using COALESCE instead of NVL
+    SUM(COALESCE(depdelay, 0)) AS departure_delay_minutes,
+    -- Standardizing the CASE/SUM logic
+    SUM(CASE WHEN COALESCE(depdelay, 0) > 0 THEN 1 ELSE 0 END) as departure_delay_count
+FROM
+    iceberg.${your_dbname}.fct_flights flights
+JOIN
+    iceberg.${your_dbname}.dim_airlines airlines
+    ON flights.uniquecarrier = airlines.code
+GROUP BY
+    airlines.code,
+    airlines.description,
+    flights.month;
+```
+Note: The time to create the MV takes apporox. 3-5 minutes.
+
+Checking that the materialized view is created.
+
+```sql
+SHOW MATERIALIZED VIEWS;
+```
+
+Results
+
+|MV_NAME | REWRITE_ENABLED |  MODE  | incremental_rebuild |
+| :- | :- | :- | :- |
+|traffic_cancel_airlines|Yes	| Manual refresh | Available |
+
+Running a query for part of the materialized view.
+
+```sql
+SELECT
+  airlines.description AS description,
+  SUM(flights.cancelled) AS flights_cancelled
+FROM
+  iceberg.${your_dbname}.fct_flights flights
+JOIN
+  iceberg.${your_dbname}.dim_airlines airlines
+  ON flights.uniquecarrier = airlines.code
+GROUP BY
+  airlines.description;
+```  
+
+Explain if query is optimzed .
+
+```sql
+
+EXPLAIN ANALYZE
+SELECT
+  airlines.description AS description,
+  SUM(flights.cancelled) AS flights_cancelled
+FROM
+  iceberg.${your_dbname}.fct_flights flights
+JOIN
+  iceberg.${your_dbname}.dim_airlines airlines
+  ON flights.uniquecarrier = airlines.code
+GROUP BY
+  airlines.description;
+```
+Output:
+```
+----
+```
+
+
+----
 ## Lab 8 - Slowly Changing Dimensions (SCD) - TYPE 2
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
