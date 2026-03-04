@@ -227,9 +227,9 @@ This can be inserted for documentation purposes.
 -----
 ## Lab 3 - Iceberg Tables
 
-Run “CREATE TABLE AS SELECT” queries to create full ACID ORC type of the tables. This creates curated versions of the data which are optimal for BI usage.
+Run “CREATE TABLE AS SELECT” queries to create full features ICEBERG v2 type of the tables. This creates curated versions of the data which are optimal for BI usage.
 
-*Do all these steps in * **“iceberg.db\_user001”..”db\_user020”** *unless otherwise noted.*
+*Do all these steps in * **“iceberg.db\_user001”..”db\_user020”**
 
 ```sql
 -- 1. Airlines Table
@@ -415,29 +415,56 @@ Results (same as previous query)
 |N377UA	| 25105 |328546	| 12163	|
 
 
-Query: Find all international flights: flights where destination airport country is not the same as origin airport country
+The "Airline Marathon" Common Table Expression (CTE) structure
+This is a CTE-type query (using the WITH clause). It first calculates the top 5 airlines by total mileage in an initial sub-block, then joins that result to the flight data to find the single longest route for each.
 
 ```sql
-SELECT DISTINCT
-    f.flightnum,
-    f.uniquecarrier,
-    f.origin,
-    f.dest,
-    f.month,
-    f.dayofmonth,
-    f."dayofweek" -- Trino uses double quotes for reserved keywords
-FROM
-    iceberg.${your_dbname}.fct_flights f
-JOIN
-    iceberg.${your_dbname}.dim_airports oa ON f.origin = oa.iata
-JOIN
-    iceberg.${your_dbname}.dim_airports da ON f.dest = da.iata
-WHERE
-    oa.country <> da.country
-ORDER BY
-    f.month ASC,
-    f.dayofmonth ASC;
+WITH TopAirlines AS (
+    -- Identify the 5 airlines with the most total mileage
+    SELECT
+        uniquecarrier,
+        SUM(distance) as total_fleet_miles
+    FROM iceberg.${your_dbname}.fct_flights
+    WHERE cancelled = 0
+    GROUP BY 1
+    ORDER BY 2 DESC
+    LIMIT 5
+),
+LongestFlights AS (
+    -- Find the max distance flight for those specific airlines
+    SELECT
+        a.description AS airline_name,
+        f.origin,
+        f.dest,
+        f.distance,
+        f.airtime,
+        -- Rank flights within each airline by distance
+        ROW_NUMBER() OVER(PARTITION BY a.description ORDER BY f.distance DESC) as rank_id
+    FROM iceberg.${your_dbname}.fct_flights f
+    JOIN iceberg.${your_dbname}.dim_airlines a ON f.uniquecarrier = a.code
+    WHERE a.code IN (SELECT uniquecarrier FROM TopAirlines)
+)
+SELECT
+    airline_name,
+    origin || ' to ' || dest AS route,
+    distance AS marathon_miles,
+    airtime AS duration_minutes
+FROM LongestFlights
+WHERE rank_id = 1
+ORDER BY marathon_miles DESC;
 ```
+
+Output:
+airline_name	flightnum	departure	arrival	distance	flight_minutes	delay_ratio_pct
+| :- | :- | :- | :- | :- | :- | :- |
+
+| airline_name |	route	marathon_miles |	duration_minutes |
+| :- | :- | :- | :- |
+| Delta Air | Lines Inc.	| ATL to HNL |	4502 |	564 |
+| United Air Lines Inc. |	ORD to HNL |	4243	| 533 |
+| American Airlines Inc. |	ORD to HNL |	4243 |	505 |
+| US Airways Inc. (Merged with America West 9/05. Reporting for both starting 10/07.)	| LIH to PHX |	2979	| 344 |
+| Southwest Airlines Co. |	OAK to PHL |	2510 | 292 |
 
 
 
