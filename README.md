@@ -416,6 +416,7 @@ Results (same as previous query)
 
 
 The "Airline Marathon" Common Table Expression (CTE) structure
+
 This is a CTE-type query (using the WITH clause). It first calculates the top 5 airlines by total mileage in an initial sub-block, then joins that result to the flight data to find the single longest route for each.
 
 ```sql
@@ -455,10 +456,8 @@ ORDER BY marathon_miles DESC;
 ```
 
 Output:
-airline_name	flightnum	departure	arrival	distance	flight_minutes	delay_ratio_pct
-| :- | :- | :- | :- | :- | :- | :- |
 
-| airline_name |	route	marathon_miles |	duration_minutes |
+| airline_name |	route	| marathon_miles |	duration_minutes |
 | :- | :- | :- | :- |
 | Delta Air | Lines Inc.	| ATL to HNL |	4502 |	564 |
 | United Air Lines Inc. |	ORD to HNL |	4243	| 533 |
