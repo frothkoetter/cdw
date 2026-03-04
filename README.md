@@ -663,12 +663,13 @@ WHERE
  ```
 This comparison perfectly illustrates the performance benefits of Iceberg Partition Evolution. In the second plan, the data was written after the partition spec was made more granular, while the first plan shows a query hitting data written before the evolution.
 
- | Metric | Query 2 (Year 2026) | Query 1 (Year 1995) |
- | Total Execution Time | 214.92 ms 🚀 | 385.49 ms 🐢 |
- | Rows Scanned (Input) | "14,175 rows" | "2,673,586 rows" |
- | Physical Input Size | 257.18 kB | 5.08 MB |
- | Filter Efficiency | 0% Filtered (Direct hit) | 99.47% Filtered (Over-scan) |
- | Physical Input Time | 637.51 μs | 284.63 ms |
+| Metric | Query 2 (Year 2026) | Query 1 (Year 1995) |
+| :- | :- | :- |
+| Total Execution Time | 214.92 ms 🚀 | 385.49 ms 🐢 |
+| Rows Scanned (Input) | "14,175 rows" | "2,673,586 rows" |
+| Physical Input Size | 257.18 kB | 5.08 MB |
+| Filter Efficiency | 0% Filtered (Direct hit) | 99.47% Filtered (Over-scan) |
+| Physical Input Time | 637.51 μs | 284.63 ms |
 
 This example shows that the execution time is greatly decreased because less data was read.
 
