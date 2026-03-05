@@ -850,20 +850,19 @@ Output:
 
 This lab you saw how Iceberg branching feature helping data quality pipelines in a data engineering workflow.
 
-## Lab 6 - Table Optimization
+## Lab 6 - Table Optimize (Compaction)
 
-We will delete rows and change optimize the table.
+### Merge-on-Read (Position Deletes).
 
-Your table is configured for Merge-on-Read (MoR) using Position Deletes.
+We will delete rows and optimize the table that is configured for Merge-on-Read (MoR) using Position Deletes.
 
-Trino wrote a few tiny .parquet files (the position deletes) to hide the rows.
+Trino will write a few tiny .parquet files (the position deletes) to hide the rows.
 
-The Optimize (Compaction): You ran EXECUTE optimize. Trino then performed a "compaction," which is essentially a delayed Copy-on-Write. It took the data + the position deletes and wrote a new "clean" data file.
+Later the we then perform a "compaction," which is essentially a delayed Copy-on-Write. It took the data + the position deletes and wrote a new "clean" data file.
 
-💡 Why this is the default in Trino
 Trino defaults to Merge-on-Read for Iceberg v2 tables because it allows for near-instant deletions. If you were forced into Copy-on-Write for an 86-million-row table, every single DELETE would take minutes as it rewrote gigabytes of data. With MoR, the delete takes milliseconds, and you "pay the tax" later during the optimize step.
 
-Query: Delete specific days in Jan 1995.
+Delete a few days in Jan 1995.
 
 ```sql
 /*
@@ -873,16 +872,15 @@ DELETE FROM iceberg.${your_dbname}.fct_flights
 WHERE
  year = 1995 and month = 1 and dayofmonth in (1,2,3);
 ```
-
 Expected Output:
 
  | rows |
  | :- |
  | 45202 |
 
-Soft delete: 45k rows marked for deletion.
+Soft delete: 45k rows marked for deletion wrote in a few tiny .parquet files (the position deletes) to hide the rows.
 
-Trino wrote a few tiny .parquet files (the position deletes) to hide the rows.
+This query shows the number of delete files and the number of rows (added-position-deletes)
 
 ```sql
 WITH LastDeleteSnapshot AS (
@@ -919,15 +917,17 @@ Expected output:
 | 3769149312242635307	| 2026-03-05 18:42:44.182 UTC | delete |	added-position-delete-files |	6 |
 | 3769149312242635307	| 2026-03-05 18:42:44.182 UTC	| delete | added-position-deletes |	45202 |
 
-Behavior: Merge-on-Read (Position Deletes).
-
 What happened: Since you only targeted a few days, Trino didn't want to rewrite the large data files for that month. Instead, it created 4 Position Delete files.
-
-The tell-tale metric: added-position-deletes: 45,202.
 
 The "Mask": The total-records remained at 86,289,323. The rows aren't gone; they are just "hidden" by the 4 new delete files. Every time you read this table now, Trino has to perform a real-time join to skip those 45k rows.
 
-Query: Delete the entire year 2000.
+### Partition Drop (Metadata-only).
+
+When you delete a whole partition (like year = 2000), Trino performs a metadata-only operation by simply unlinking the relevant data files from the table’s manifest.
+
+This process is nearly instantaneous and highly efficient because it physically removes millions of records without rewriting a single byte of data.
+
+Delete the entire year 2000.
 
 ```sql
 /*
@@ -942,6 +942,9 @@ Expected output:
 | rows |
 | :- |
 | 5683047 |
+
+
+This query shows the number of delete files and the number of rows (deleted-records)
 
 ```sql
 WITH LastDeleteSnapshot AS (
@@ -978,22 +981,21 @@ Expected output:
 |1282395553745806941 |	2026-03-05 19:05:15.600 UTC |	delete |	deleted-data-files |	7 |
 |1282395553745806941 |	2026-03-05 19:05:15.600 UTC	| delete	 | deleted-records |	5683047 |
 
-
-Behavior: Partition Drop (Metadata-only).
-
 What happened: This was a "massive" cleanup. Because your table is partitioned by year, Trino realized it didn't need to write any delete files or rewrite any data. It simply unlinked the files belonging to that year.
-
-The tell-tale metric: deleted-data-files: 7 and deleted-records: 5,683,047.
 
 Actual Removal: Unlike the first query, the total-records dropped significantly from ~86M down to ~80.6M.
 
 Performance: This is the fastest type of delete in the big data world. It’s nearly instantaneous because it only updates the metadata manifest to say "ignore these 7 files."
-The deleted rows are marked into files and keeps the rows in the original data file or in other words the delete rows are not removed from the data files. Let's see how many physical files we have:
 
-What is most interesting here is that you have captured two completely different physical behaviors in Iceberg, triggered by how much data you were deleting.
+The deleted rows are marked into files and keeps the rows in the original data file or in other words the delete rows are not removed from the data files.
 
-Trino automatically switched between Merge-on-Read (using Delete Files) and Metadata-only Deletion (dropping whole partitions).
+What is most interesting here is that you have captured two completely different physical behaviors in Iceberg, triggered by how much data you were deleting. Trino automatically switched between Merge-on-Read (using Delete Files) and Metadata-only Deletion (dropping whole partitions).
 
+### Optimize
+
+The OPTIMIZE procedure performs a compaction by rewriting fragmented data and "baking" any existing delete files into new, clean Parquet files. This transition from Merge-on-Read to a flat data structure eliminates the runtime overhead of masking rows, significantly accelerating future query performance.
+
+Once completed, the $snapshots table will record a replace operation, indicating that the old, inefficient data and delete files have been replaced by these newly consolidated versions.
 
 ```sql
 /*
@@ -1004,15 +1006,9 @@ ALTER TABLE iceberg.${your_dbname}.fct_flights
 EXECUTE optimize
 WHERE year = 1995;
 ```
-Note: this may need some time to finish ( 1-2 minutes or more depending on the workload)
+Note: this may need some time to finish.
 
 After running this, if you check your $snapshots table again, you will see a new replace operation:
-
-Removes Delete Files: The total-delete-files count for the table will drop from 4 back to 0.
-
-Purges Records: The total-records count will finally drop by those 45,202 rows. They are no longer just "masked"; they are physically gone from the new Parquet files.
-
-Consolidates Data: If 1995 was spread across many small files, Trino will merge them into fewer, larger, more efficient files.
 
 ```sql
 SELECT
@@ -1033,7 +1029,6 @@ GROUP BY 1;
 | Data File (Clean) |	88 |	80561074 |	1037.5 |
 
 Your table is now fully optimized with 80.5 million rows stored in 88 clean data files and zero delete debt, ensuring maximum read performance.
-
 
 
 ### Lab 6 - Table Rollback - optional
