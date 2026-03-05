@@ -691,15 +691,14 @@ This comparison perfectly illustrates the performance benefits of Iceberg Partit
 | Metric | Query 2 (Year 2026) | Query 1 (Year 1995) |
 | :- | :- | :- |
 | Total Execution Time | 214.92 ms 🚀 | 385.49 ms 🐢 |
-| Rows Scanned (Input) | "14,175 rows" | "2,673,586 rows" |
+| Rows Scanned (Input) | 14,175 rows | 2,673,586 rows |
 | Physical Input Size | 257.18 kB | 5.08 MB |
 | Filter Efficiency | 0% Filtered (Direct hit) | 99.47% Filtered (Over-scan) |
-| Physical Input Time | 637.51 μs | 284.63 ms |
+| Physical Input Time | 0.64 ms | 284.63 ms |
 
 This example shows that the execution time is greatly decreased because less data was read.
 
-## Lab 6 - Data Quality with Branching
-*Enter the your_dbname as **“db\_user001”..”db\_user020”** in this HUE parameter field
+## Lab 5 - Data Quality with Branching - (TBD)
 
 The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. It is imperative to conduct thorough testing, cleansing and validation of data at every stage of the data pipeline before deployment into the production.
 
@@ -726,26 +725,25 @@ In this lab we go through these steps for the AIRPORTS table.
 Begin with the creation of ICEBERG V2 table with the raw data and run the first test checking uniqueness of the IATA code:
 
 ```sql
-drop table if exists ${your_dbname}.airports_ice;
-create table ${your_dbname}.airports_ice stored by iceberg TBLPROPERTIES('format-version'='2')
-as select * from ${your_dbname}.airports_csv;
-
-/*
-** QA test:  iata unique values   
+/* ** QA TEST: Ensure IATA codes are unique
+** EXPECTATION: failures = 0
 */
-select
-      count(*) as failures,
-      count(*) != 0 as should_warn,
-      count(*) != 0 as should_error
-    from (
-select
-    iata as unique_field,
-    count(*) as n_records
-from airports_ice
-where iata is not null
-group by iata
-having count(*) > 1
-) iata_unique_test;
+SELECT
+    count(*) AS failures,
+    count(*) != 0 AS should_warn,
+    count(*) != 0 AS should_error
+FROM (
+    SELECT
+        iata AS unique_field,
+        count(*) AS n_records
+    FROM
+        iceberg.${your_dbname}.dim_airports
+    WHERE
+        iata IS NOT NULL
+    GROUP BY 1
+    HAVING count(*) > 1
+) AS iata_unique_test;
+
 ```
 
 The output should like this not reporting any duplicate IATA codes.
@@ -756,25 +754,26 @@ The output should like this not reporting any duplicate IATA codes.
 
 Now running the 2nd test of the field length for the IATA code that must be 3:
 ```sql
-/*
-** test iata len = 3
+/* ** QA TEST: Validate IATA length (Must be exactly 3)
+** EXPECTATION: failures = 0
 */
-select
-      count(*) as failures,
-      count(*) != 0 as should_warn,
-      count(*) != 0 as should_error
-from (
-      with validation as (
-	                         select iata as field
-	                          from airports_ice
-                         ),
-                         validation_errors as (
-	   select field from validation
-	    where LENGTH(field) != 3
-                        )
-select *
-from validation_errors
-) iata_length_test;
+SELECT
+    count(*) AS failures,
+    count(*) != 0 AS should_warn,
+    count(*) != 0 AS should_error
+FROM (
+    WITH validation AS (
+        SELECT iata AS field
+        FROM iceberg.${your_dbname}.dim_airports
+        WHERE iata IS NOT NULL -- Exclude nulls from length check
+    ),
+    validation_errors AS (
+        SELECT field
+        FROM validation
+        WHERE length(field) != 3
+    )
+    SELECT * FROM validation_errors
+) AS iata_length_test;
 ```
 
 
@@ -785,37 +784,8 @@ The test shows that 42 rows are not having the correct length.
 | 42 |	true |	true |
 
 
-Running the 3rd test and find quotation marks in the field AIRPORT
-
-```sql
-/*
-**  QA test: quotation marks in fields
-*/
-select
-      count(*) as failures,
-      count(*) >10 as should_warn,
-      count(*) >1000 as should_error
-    from (
-with validation as (
-	select airport as field
-	from airports_ice
-),
-validation_errors as (
-	select field from validation
-	where field rlike('"')
-)
-select *
-from validation_errors
-) quotation_marks_test;
-```
-
-The Output is 373 rows with quotation marks in the field AIRPORT and there is a warning and error level.
 
 NOTE: it's good practice to have a warning level i.e. here 10 rows may is acceptable and does not require cleaning.
-
-|failures |	should_warn	| should_error |
-| :- | :- |  :- |
-| 373 |	true |	false |
 
 This last test showing a WARNING and we data should clean the data.  
 
@@ -846,10 +816,6 @@ Now do the cleaning job and delete rows where the IATA code is != 3 and remove t
 */
 delete from ${your_dbname}.airports_ice.branch_qa
 where LENGTH(iata) != 3;
-
-update ${your_dbname}.airports_ice.branch_qa
-set airport = regexp_replace( airport ,'"','')
-where airport rlike('"');
 ```
 
 Output should like this:
@@ -880,40 +846,12 @@ Next is to validate the data we have cleansed to be on the save side.
  ) iata_length_test;
 ```
 
-Output looks good:
+Expected Output:
 
  |failures |	should_warn	| should_error |
  | :- | :- |  :- |
  | 0 |	false |	false |
 
-Run the 2nd validation
-
- ```SQL
- /*
- **  validation: no quotation marks in Field
- */
- select
-       count(*) as failures,
-       count(*) >10 as should_warn,
-       count(*) >1000 as should_error
-     from (
- with validation as (
- 	select airport as field
- 	from ${your_dbname}.airports_ice.branch_qa
- ),
- validation_errors as (
- 	select field from validation
- 	where field rlike('"')
- )
- select *
- from validation_errors
- ) quotation_marks_validation;
-```
-Output looks good:
-
-|failures |	should_warn	| should_error |
-| :- | :- |  :- |
-| 0 |	false |	false |
 
 Both validations show no failures and we can move the data from the QA branch into the main branch and drop the QA branch for housekeeping.
 
@@ -939,17 +877,93 @@ This lab you saw how Iceberg branching feature helping data quality pipelines in
 
 The next part is about Iceberg table maintenance
 
-We will delete rows for three dayofmonth with three delete statements and change the partition schema before optimize the table.
+We will delete rows and change the partition schema before optimize the table.
 
+Your table is configured for Merge-on-Read (MoR) using Position Deletes.
+
+The snapshots show you moved between MoR and CoW-like results manually:
+
+The Delete (MoR): You ran a delete. Trino wrote a few tiny .parquet files (the position deletes) to hide the rows.
+
+The Optimize (Compaction): You ran EXECUTE optimize. Trino then performed a "compaction," which is essentially a delayed Copy-on-Write. It took the data + the position deletes and wrote a new "clean" data file.
+
+💡 Why this is the default in Trino
+Trino defaults to Merge-on-Read for Iceberg v2 tables because it allows for near-instant deletions. If you were forced into Copy-on-Write for an 86-million-row table, every single DELETE would take minutes as it rewrote gigabytes of data. With MoR, the delete takes milliseconds, and you "pay the tax" later during the optimize step.
 
 ```sql
 /*
 ** delete few months of data
 */
-delete from flights_ice where dayofmonth = 2;
-delete from flights_ice where dayofmonth = 4;
-delete from flights_ice where dayofmonth = 6;
+DELETE FROM iceberg.${your_dbname}.fct_flights
+WHERE
+ year = 1995 and month = 1 and dayofmonth in (1,2,3);
 ```
+
+Expected Output:
+
+ |failures |
+ | :- |
+ | 45202 |
+
+Soft Delete: 45k rows marked for deletion.
+
+
+```sql
+/*
+** delete a full year of data
+*/
+DELETE FROM iceberg.${your_dbname}.fct_flights
+WHERE
+ year = 2000;
+```
+
+Hard Delete: Dropped an entire partition (5.2M rows).
+
+
+Default Postion Delete
+
+```sql
+WITH LastDeleteSnapshot AS (
+    -- Find the most recent snapshot ID that added delete files
+    SELECT snapshot_id
+    FROM iceberg.${your_dbname}."fct_flights$snapshots"
+    WHERE operation IN ('overwrite', 'delete')
+       OR CAST(summary['total-delete-files'] AS INTEGER) > 0
+    ORDER BY committed_at DESC
+    LIMIT 1
+)
+SELECT
+    s.snapshot_id,
+    s.committed_at,
+    s.operation,
+    -- Flatten the map into a vertical list
+    metric.name AS metric_name,
+    metric.value AS metric_value
+FROM
+    iceberg.${your_dbname}."fct_flights$snapshots" s
+CROSS JOIN
+    UNNEST(s.summary) AS metric(name, value)
+JOIN
+    LastDeleteSnapshot lds ON s.snapshot_id = lds.snapshot_id
+ORDER BY
+    metric.name ASC;
+```
+
+| snapshot_id	| metric_name	| metric_value |
+| :- | :- | :- |
+| 2165912603356077811	| added-delete-files |	5 |
+| 2165912603356077811	| added-files-size | 	57420 |
+| 2165912603356077811	| added-position-delete-files | 	5 |
+| 2165912603356077811	| added-position-deletes | 	45202 |
+| 2165912603356077811	| changed-partition-count	| 1 |
+| 2165912603356077811	| total-data-files | 	107 |
+| 2165912603356077811	| total-delete-files | 	5 |
+| 2165912603356077811	| total-equality-deletes	| 0 |
+| 2165912603356077811	| total-files-size | 	1145844089 |
+| 2165912603356077811	| total-position-deletes | 	45202 |
+| 2165912603356077811	| total-records	| 86289323 |
+| 2165912603356077811	| trino_query_id	|  20260305_074822_00049_dffp9 |
+
 
 The deleted rows are marked into files and keeps the rows in the original data file or in other words the delete rows are not removed from the data files. Let's see how many physical files we have:
 
