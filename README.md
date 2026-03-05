@@ -703,7 +703,7 @@ This comparison perfectly illustrates the performance benefits of Iceberg Partit
 
 This example shows that the execution time is greatly decreased because less data was read.
 
-## Lab 5 - Data Quality with Branching
+## ⚠️ Lab 5 - Data Quality with Branching **** WORK IN PROGRESS *** ⚠️
 
 The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. It is imperative to conduct thorough testing, cleansing and validation of data at every stage of the data pipeline before deployment into the production.
 
