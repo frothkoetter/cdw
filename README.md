@@ -1031,11 +1031,14 @@ GROUP BY 1;
 Your table is now fully optimized with 80.5 million rows stored in 88 clean data files and zero delete debt, ensuring maximum read performance.
 
 
-### Lab 6 - Table Rollback - optional
+### Lab 6 - Table Rollback (optional)
 
-Restores your table to its original state by resetting the metadata "pointer" to the very first snapshot.
+The final step is the Rollback, which restores your table to its original state by resetting the metadata "pointer" to the very first snapshot.
 
-Finding the Origin: Your query identifies the unique Snapshot ID created on March 3rd. Since parent_id is NULL, this is the definitive "root" of the table's history.
+By pointing the table back to its "birth" snapshot, you effectively ignore every deletion and optimization performed since the initial load, causing all original records to reappear instantly.
+
+
+Start finding the Origin: Your query identifies the unique Snapshot ID when created today. Since parent_id is NULL, this is the definitive "root" of the table's history.
 
 
 ```sql
@@ -1062,7 +1065,7 @@ Expected outcome:
 The Rollback Call: The CALL iceberg.system.rollback_to_snapshot(...) is a metadata-only operation. It doesn't move data; it simply tells the Iceberg table to ignore every DELETE, OVERWRITE, and REPLACE (Optimize) that happened.
 
 ```sql
--- DANGER: This changes the 'main' branch pointer back to the initial load
+-- DANGER ZONE: This changes the 'main' branch pointer back to the initial load
 CALL iceberg.system.rollback_to_snapshot('${your_dbname}', 'fct_flights', ****snapshot_id****);
 ```
 The Result: When you run the final SELECT count(1), you should see your original 86,289,323 rows reappear instantly.
@@ -1077,7 +1080,7 @@ FROM
 ⚠️ Important Note on "DANGER"
 The rollback is "dangerous" because it makes all your recent work (the 5.7M deletions and optimizations) "invisible" to the main table. However, in Iceberg, those files aren't physically deleted immediately—they stay in storage until an expire_snapshots command is run.
 
-### Lab 6 - Snapshots Maintenance - optional
+### Lab 6 - Snapshots Maintenance (optional)
 
 To remove the unused data we now expire the snapshots and remove the data pyhsically. After the optimize is done, the old files (the ones with the deleted rows) still sit on S3/HDFS for a few days in case you want to "Time Travel" back. If you want to save storage space immediately, you can follow up with:
 
