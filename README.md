@@ -710,10 +710,6 @@ The quality of data holds immense importance within any data engineering process
 The QA pipeline looks like the following:
 ![](images/cdw-lab6-qa001C.png)
 
-The QA steps are test, cleanse, validate and propagate to production.
-
-![](images/cdw-lab6-qa002.png)
-
 Begin with the creation of ICEBERG V2 table with the raw data and run the first test checking  the field length for the IATA code that must be 3:
 
 ```sql
