@@ -710,20 +710,7 @@ The quality of data holds immense importance within any data engineering process
 The QA pipeline looks like the following:
 ![](images/cdw-lab6-qa001C.png)
 
-The QA steps are test, cleanse, validate and propergate to production.
-
-In this lab we go through these steps for the AIRPORTS table.
-
-
-1) uniqueness of the IATA codes
-
-2) length of field IATA should be always 3
-
-3) no quotation marks in the field AIRPORT
-
-
-
-*Enter the your_dbname as **“db\_user001”..”db\_user020”** in this HUE parameter field
+The QA steps are test, cleanse, validate and propagate to production.
 
 ![](images/cdw-lab6-qa002.png)
 
@@ -760,16 +747,36 @@ The test shows that 42 rows are not having the correct length.
 
 NOTE: it's good practice to have a warning level i.e. here 10 rows may is acceptable and does not require cleaning.
 
-This last test showing a WARNING and we data should clean the data.  
+Then create a branch with the name QA.
 
-Now we know what exactly do we create a branch with the name QA.
 ```SQL
 /*
-** create branch  
+** find the snapshot_id
 */
-ALTER TABLE iceberg.${your_dbname}.dim_airports EXECUTE create_branch('QA')
+SELECT
+  snapshot_id,
+  committed_at,
+  parent_id,
+  operation
+FROM
+  iceberg.${your_dbname}."dim_airports$snapshots";
+```
 
-select * from iceberg.${your_dbname}.dim_airports.refs;
+| snapshot_id |	committed_at |	parent_id |	operation
+| :- | :- |  :- | :- | :- |
+| 6720208314915384918 |	2026-03-03 09:15:37.781 UTC	| NULL	| append |
+
+```SQL
+-- Create a branch named 'v1_original' from your initial snapshot
+ALTER TABLE iceberg.${your_dbname}.fct_flights
+CREATE BRANCH QA
+AS OF VERSION
+
+ALTER TABLE iceberg.${your_dbname}.dim_airports EXECUTE create_branch('QA')
+ALTER TABLE table_name EXECUTE create_branch('branch_name')
+
+-- Query a branch: SELECT * FROM "table_name$branch_branch_name"
+-- select * from iceberg.${your_dbname}.dim_airports.refs;
 ```
 
 The list of branches are as follows:
@@ -787,7 +794,7 @@ Now do the cleaning job and delete rows where the IATA code is != 3 and remove t
 /*
 ** Data Cleansing: data transformations
 */
-delete from ${your_dbname}.airports_ice.branch_qa
+⚠️ delete from ${your_dbname}.airports_ice.branch_qa
 where LENGTH(iata) != 3;
 ```
 
@@ -829,6 +836,8 @@ Expected Output:
 Both validations show no failures and we can move the data from the QA branch into the main branch and drop the QA branch for housekeeping.
 
  ```SQL
+ -- Drop a branch: ALTER TABLE table_name EXECUTE drop_branch('branch_name')
+⚠️
 ALTER table airports_ice EXECUTE FAST-FORWARD 'qa';
 
 ALTER TABLE airports_ice DROP BRANCH if exists qa;
@@ -844,7 +853,6 @@ Output:
 
 
 This lab you saw how Iceberg branching feature helping data quality pipelines in a data engineering workflow.
-
 
 ## Lab 6 - Table Optimization
 
