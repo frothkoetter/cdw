@@ -10,15 +10,16 @@ This workshop gives you an overview of how to use the Cloudera Data Warehouse se
 Enitiy-Relation Diagram of tables we use in todays workshop:
 - fact table: flights (86mio rows)
 - dimension tables: airlines (1.5k rows), airports (3.3k rows) and planes (5k rows)
+- federation table: customer_complains (50k rows)
 
 ![](images/image001.png)
 
 -----
-## Lab 1 - Create Database
+## Lab 1 - Create Schema
 
 Navigate to Data Warehouse, then Trino Virtual Warehouse and open the HUE SQL Authoring tool.
 
-Create new database for your user to be used, or use one that is already created for you.
+Create new schema for your user to be used, or use one that is already created for you.
 
 ```sql
 -- 1. Create the schema in the Iceberg catalog
@@ -364,7 +365,7 @@ Result: column data statistics
  FROM iceberg.${your_dbname}."fct_flights$partitions"
  ORDER BY partition;
  ```
-Result: showing all 14 partitions with keys
+Result: showing all 14 partitions with keys (years)
 
 |partition |      record_count|    file_count   |   total_size|
 | :- |:- |:- |:- |
@@ -459,7 +460,7 @@ Output:
 
 | airline_name |	route	| marathon_miles |	duration_minutes |
 | :- | :- | :- | :- |
-| Delta Air | Lines Inc.	| ATL to HNL |	4502 |	564 |
+| Delta Air Lines Inc.	| ATL to HNL |	4502 |	564 |
 | United Air Lines Inc. |	ORD to HNL |	4243	| 533 |
 | American Airlines Inc. |	ORD to HNL |	4243 |	505 |
 | US Airways Inc. (Merged with America West 9/05. Reporting for both starting 10/07.)	| LIH to PHX |	2979	| 344 |
@@ -467,9 +468,9 @@ Output:
 
 
 
-### Defaults - Surrogate_key & Sequence
+### Surrogate_key
 
-Surrogate keys are easy & distributable & fast, but not in sequence, has gaps.
+Trino can use UUID as surrogate keys easy & distributable & fast, but not in sequence and has gaps.
 
 ```sql
 DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines_with_surrogate_key;
@@ -482,7 +483,11 @@ CREATE TABLE iceberg.${your_dbname}.dim_airlines_with_surrogate_key (
 );
 
 INSERT INTO iceberg.${your_dbname}.dim_airlines_with_surrogate_key (id, code, description)
-SELECT cast( uuid() as varchar), code, description FROM hive.${your_dbname}.airlines_csv;
+SELECT
+  cast( uuid() as varchar),
+  code, description
+FROM
+  hive.${your_dbname}.airlines_csv;
 
 SELECT
  *
@@ -698,7 +703,7 @@ This comparison perfectly illustrates the performance benefits of Iceberg Partit
 
 This example shows that the execution time is greatly decreased because less data was read.
 
-## Lab 5 - Data Quality with Branching - (TBD)
+## Lab 5 - Data Quality with Branching
 
 The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. It is imperative to conduct thorough testing, cleansing and validation of data at every stage of the data pipeline before deployment into the production.
 
@@ -722,37 +727,8 @@ In this lab we go through these steps for the AIRPORTS table.
 
 ![](images/cdw-lab6-qa002.png)
 
-Begin with the creation of ICEBERG V2 table with the raw data and run the first test checking uniqueness of the IATA code:
+Begin with the creation of ICEBERG V2 table with the raw data and run the first test checking  the field length for the IATA code that must be 3:
 
-```sql
-/* ** QA TEST: Ensure IATA codes are unique
-** EXPECTATION: failures = 0
-*/
-SELECT
-    count(*) AS failures,
-    count(*) != 0 AS should_warn,
-    count(*) != 0 AS should_error
-FROM (
-    SELECT
-        iata AS unique_field,
-        count(*) AS n_records
-    FROM
-        iceberg.${your_dbname}.dim_airports
-    WHERE
-        iata IS NOT NULL
-    GROUP BY 1
-    HAVING count(*) > 1
-) AS iata_unique_test;
-
-```
-
-The output should like this not reporting any duplicate IATA codes.
-
-| failures | should_warn | should_error |
-| :- | :- |  :- |
-|0 | false |	false |
-
-Now running the 2nd test of the field length for the IATA code that must be 3:
 ```sql
 /* ** QA TEST: Validate IATA length (Must be exactly 3)
 ** EXPECTATION: failures = 0
@@ -776,14 +752,11 @@ FROM (
 ) AS iata_length_test;
 ```
 
-
 The test shows that 42 rows are not having the correct length.
 
 |failures |	should_warn	| should_error |
 | :- | :- |  :- |
 | 42 |	true |	true |
-
-
 
 NOTE: it's good practice to have a warning level i.e. here 10 rows may is acceptable and does not require cleaning.
 
@@ -794,9 +767,9 @@ Now we know what exactly do we create a branch with the name QA.
 /*
 ** create branch  
 */
-ALTER TABLE airports_ice CREATE BRANCH qa;
+ALTER TABLE iceberg.${your_dbname}.dim_airports EXECUTE create_branch('QA')
 
-select * from ${your_dbname}.airports_ice.refs;
+select * from iceberg.${your_dbname}.dim_airports.refs;
 ```
 
 The list of branches are as follows:
@@ -873,26 +846,24 @@ Output:
 This lab you saw how Iceberg branching feature helping data quality pipelines in a data engineering workflow.
 
 
-## Lab 7 - Table Maintenance
+## Lab 6 - Table Optimization
 
-The next part is about Iceberg table maintenance
-
-We will delete rows and change the partition schema before optimize the table.
+We will delete rows and change optimize the table.
 
 Your table is configured for Merge-on-Read (MoR) using Position Deletes.
 
-The snapshots show you moved between MoR and CoW-like results manually:
-
-The Delete (MoR): You ran a delete. Trino wrote a few tiny .parquet files (the position deletes) to hide the rows.
+Trino wrote a few tiny .parquet files (the position deletes) to hide the rows.
 
 The Optimize (Compaction): You ran EXECUTE optimize. Trino then performed a "compaction," which is essentially a delayed Copy-on-Write. It took the data + the position deletes and wrote a new "clean" data file.
 
 💡 Why this is the default in Trino
 Trino defaults to Merge-on-Read for Iceberg v2 tables because it allows for near-instant deletions. If you were forced into Copy-on-Write for an 86-million-row table, every single DELETE would take minutes as it rewrote gigabytes of data. With MoR, the delete takes milliseconds, and you "pay the tax" later during the optimize step.
 
+Query: Delete specific days in Jan 1995.
+
 ```sql
 /*
-** delete few months of data
+** delete few days of data
 */
 DELETE FROM iceberg.${your_dbname}.fct_flights
 WHERE
@@ -901,26 +872,13 @@ WHERE
 
 Expected Output:
 
- |failures |
+ | rows |
  | :- |
  | 45202 |
 
-Soft Delete: 45k rows marked for deletion.
+Soft delete: 45k rows marked for deletion.
 
-
-```sql
-/*
-** delete a full year of data
-*/
-DELETE FROM iceberg.${your_dbname}.fct_flights
-WHERE
- year = 2000;
-```
-
-Hard Delete: Dropped an entire partition (5.2M rows).
-
-
-Default Postion Delete
+Trino wrote a few tiny .parquet files (the position deletes) to hide the rows.
 
 ```sql
 WITH LastDeleteSnapshot AS (
@@ -945,107 +903,201 @@ CROSS JOIN
     UNNEST(s.summary) AS metric(name, value)
 JOIN
     LastDeleteSnapshot lds ON s.snapshot_id = lds.snapshot_id
+WHERE
+    metric.name in ('added-position-delete-files','added-position-deletes','deleted-data-files','deleted-records')
 ORDER BY
     metric.name ASC;
 ```
+Expected output:
 
-| snapshot_id	| metric_name	| metric_value |
-| :- | :- | :- |
-| 2165912603356077811	| added-delete-files |	5 |
-| 2165912603356077811	| added-files-size | 	57420 |
-| 2165912603356077811	| added-position-delete-files | 	5 |
-| 2165912603356077811	| added-position-deletes | 	45202 |
-| 2165912603356077811	| changed-partition-count	| 1 |
-| 2165912603356077811	| total-data-files | 	107 |
-| 2165912603356077811	| total-delete-files | 	5 |
-| 2165912603356077811	| total-equality-deletes	| 0 |
-| 2165912603356077811	| total-files-size | 	1145844089 |
-| 2165912603356077811	| total-position-deletes | 	45202 |
-| 2165912603356077811	| total-records	| 86289323 |
-| 2165912603356077811	| trino_query_id	|  20260305_074822_00049_dffp9 |
+| snapshot_id |	committed_at | operation |	metric_name |	metric_value |
+| :- | :- | :- | :- |
+| 3769149312242635307	| 2026-03-05 18:42:44.182 UTC | delete |	added-position-delete-files |	6 |
+| 3769149312242635307	| 2026-03-05 18:42:44.182 UTC	| delete | added-position-deletes |	45202 |
+
+Behavior: Merge-on-Read (Position Deletes).
+
+What happened: Since you only targeted a few days, Trino didn't want to rewrite the large data files for that month. Instead, it created 4 Position Delete files.
+
+The tell-tale metric: added-position-deletes: 45,202.
+
+The "Mask": The total-records remained at 86,289,323. The rows aren't gone; they are just "hidden" by the 4 new delete files. Every time you read this table now, Trino has to perform a real-time join to skip those 45k rows.
+
+Query: Delete the entire year 2000.
+
+```sql
+/*
+** delete a full year of data (one partition)
+*/
+DELETE FROM iceberg.${your_dbname}.fct_flights
+WHERE
+ year = 2000;
+```
+
+Expected output:
+| rows |
+| :- |
+| 5683047 |
+
+```sql
+WITH LastDeleteSnapshot AS (
+    -- Find the most recent snapshot ID that added delete files
+    SELECT snapshot_id
+    FROM iceberg.${your_dbname}."fct_flights$snapshots"
+    WHERE operation IN ('overwrite', 'delete')
+       OR CAST(summary['total-delete-files'] AS INTEGER) > 0
+    ORDER BY committed_at DESC
+    LIMIT 1
+)
+SELECT
+    s.snapshot_id,
+    s.committed_at,
+    s.operation,
+    -- Flatten the map into a vertical list
+    metric.name AS metric_name,
+    metric.value AS metric_value
+FROM
+    iceberg.${your_dbname}."fct_flights$snapshots" s
+CROSS JOIN
+    UNNEST(s.summary) AS metric(name, value)
+JOIN
+    LastDeleteSnapshot lds ON s.snapshot_id = lds.snapshot_id
+WHERE
+    metric.name in ('added-position-delete-files','added-position-deletes','deleted-data-files','deleted-records')
+ORDER BY
+    metric.name ASC;
+```
+Expected output:
+
+| snapshot_id	| committed_at |	operation	| metric_name	| metric_value |
+| :- | :- | :- | :- | :- |
+|1282395553745806941 |	2026-03-05 19:05:15.600 UTC |	delete |	deleted-data-files |	7 |
+|1282395553745806941 |	2026-03-05 19:05:15.600 UTC	| delete	 | deleted-records |	5683047 |
 
 
+Behavior: Partition Drop (Metadata-only).
+
+What happened: This was a "massive" cleanup. Because your table is partitioned by year, Trino realized it didn't need to write any delete files or rewrite any data. It simply unlinked the files belonging to that year.
+
+The tell-tale metric: deleted-data-files: 7 and deleted-records: 5,683,047.
+
+Actual Removal: Unlike the first query, the total-records dropped significantly from ~86M down to ~80.6M.
+
+Performance: This is the fastest type of delete in the big data world. It’s nearly instantaneous because it only updates the metadata manifest to say "ignore these 7 files."
 The deleted rows are marked into files and keeps the rows in the original data file or in other words the delete rows are not removed from the data files. Let's see how many physical files we have:
 
+What is most interesting here is that you have captured two completely different physical behaviors in Iceberg, triggered by how much data you were deleting.
+
+Trino automatically switched between Merge-on-Read (using Delete Files) and Metadata-only Deletion (dropping whole partitions).
+
+
 ```sql
 /*
-** show delete files and data files
+** Optimize the files
 */
-SELECT CASE content
-     WHEN 0 THEN 'data file'
-     WHEN 1 THEN 'delete file'
-     ELSE 'n/a' END AS content_type,
-     count(1) count_files,
-     round(sum((file_size_in_bytes/1024/1024)),3) total_file_size_MB,
-     round(avg((file_size_in_bytes/1024/1014)),3) avg_file_size_MB     
-FROM ${your_dbname}.flights_ice.all_files
-Group by content;
+-- This "bakes" the 1995 deletes into new, clean data files
+ALTER TABLE iceberg.${your_dbname}.fct_flights
+EXECUTE optimize
+WHERE year = 1995;
 ```
+Note: this may need some time to finish ( 1-2 minutes or more depending on the workload)
 
-Result: showing three newly delete files, one for every delete command.
+After running this, if you check your $snapshots table again, you will see a new replace operation:
 
-| content_type |	count_files	| total_file_size_mb | avg_file_size_mb |
+Removes Delete Files: The total-delete-files count for the table will drop from 4 back to 0.
+
+Purges Records: The total-records count will finally drop by those 45,202 rows. They are no longer just "masked"; they are physically gone from the new Parquet files.
+
+Consolidates Data: If 1995 was spread across many small files, Trino will merge them into fewer, larger, more efficient files.
+
+```sql
+SELECT
+    CASE content
+        WHEN 0 THEN 'Data File (Clean)'
+        WHEN 1 THEN 'Position Delete (Debt)'
+        WHEN 2 THEN 'Equality Delete (Debt)'
+    END AS file_type,
+    count(*) AS file_count,
+    sum(record_count) AS total_records,
+    round(sum(file_size_in_bytes) / 1024.0 / 1024.0, 2) AS size_mb
+FROM iceberg.${your_dbname}."fct_flights$files"
+-- WHERE partition['year'] = 1995 -- Filter specifically for the optimized year
+GROUP BY 1;
+```
+| file_type	| file_count |	total_records |	size_mb |
 | :- | :- | :- | :- |
-| delete file	| 6	| 2.09	| 0.352 |
-| data file	| 5	|  132.202 |	26.701 |
+| Data File (Clean) |	88 |	80561074 |	1037.5 |
 
-Note: The delete files are very small because they only holding the position of the delete rows.
+Your table is now fully optimized with 80.5 million rows stored in 88 clean data files and zero delete debt, ensuring maximum read performance.
 
 
-The data files having two different partition schemes
-   - by YEAR
-   - by YEAR, MONTH, DAYOFMONTH
 
-Let's organise the data in a new partition by YEAR, MONTH and optimize or compact the table.
+### Lab 6 - Table Rollback - optional
 
-```sql
-/*
-** set the partition to YEAR/MONTH, no old data is moved or re-organised.
-*/
-ALTER TABLE flights_ice SET PARTITION SPEC (year ,month);
-```
+Restores your table to its original state by resetting the metadata "pointer" to the very first snapshot.
 
-Now let's do the real hard work, create a new snapshot and rewrite the data files.
+Finding the Origin: Your query identifies the unique Snapshot ID created on March 3rd. Since parent_id is NULL, this is the definitive "root" of the table's history.
+
 
 ```sql
-/*
-** create a new data file (without the deleted rows)
-*/
-OPTIMIZE TABLE flights_ice REWRITE DATA;
+SELECT
+    snapshot_id,
+    committed_at,
+    operation,
+    summary['added-records'] AS rows_ingested
+FROM
+    iceberg.${your_dbname}."fct_flights$snapshots"
+WHERE
+    parent_id IS NULL
+    AND operation = 'append'
+ORDER BY
+    committed_at ASC
+LIMIT 1;
 ```
-Note: this may need some time to finish ( 2 minutes or more depending on the workload)
 
-Because we have meanwhile many snapshots and the all data is still available.
+Expected outcome:
+| snapshot_id	| committed_at |	operation	| rows_ingested |
+| :- | :- | :- | :- |
+| 5979788703124072168	| 2026-03-05 19:01:40.585 UTC |	append |	86289323 |
 
-To remove the unused data we now expire the snapshots and remove the data pyhsically.
+The Rollback Call: The CALL iceberg.system.rollback_to_snapshot(...) is a metadata-only operation. It doesn't move data; it simply tells the Iceberg table to ignore every DELETE, OVERWRITE, and REPLACE (Optimize) that happened.
+
+```sql
+-- DANGER: This changes the 'main' branch pointer back to the initial load
+CALL iceberg.system.rollback_to_snapshot('${your_dbname}', 'fct_flights', ****snapshot_id****);
+```
+The Result: When you run the final SELECT count(1), you should see your original 86,289,323 rows reappear instantly.
+
+```sql
+SELECT
+  count(1) num_rows
+FROM
+  iceberg.${your_dbname}.fct_flights;
+```
+
+⚠️ Important Note on "DANGER"
+The rollback is "dangerous" because it makes all your recent work (the 5.7M deletions and optimizations) "invisible" to the main table. However, in Iceberg, those files aren't physically deleted immediately—they stay in storage until an expire_snapshots command is run.
+
+### Lab 6 - Snapshots Maintenance - optional
+
+To remove the unused data we now expire the snapshots and remove the data pyhsically. After the optimize is done, the old files (the ones with the deleted rows) still sit on S3/HDFS for a few days in case you want to "Time Travel" back. If you want to save storage space immediately, you can follow up with:
 
 ```sql
 /*
 ** expire all snapshots that will remove all unused the data and delete files
 */
-ALTER TABLE flights_ice EXECUTE EXPIRE_SNAPSHOTS('2025-12-31 24:00:00');  
+
+SQL
+-- Removes the old, unoptimized physical files from storage
+ALTER TABLE iceberg.${your_dbname}.fct_flights
+EXECUTE expire_snapshots(retention_threshold => '0d');
 ```
+Expected outcome:
 
-```sql
-SELECT CASE content
-     WHEN 0 THEN 'data file'
-     WHEN 1 THEN 'delete file'
-     ELSE 'n/a' END AS content_type,
-     count(1) count_files,
-     round(sum((file_size_in_bytes/1024/1024)),3) total_file_size_MB,
-     round(avg((file_size_in_bytes/1024/1014)),3) avg_file_size_MB     
-FROM ${your_dbname}.flights_ice.all_files
-Group by content;
-```
+TrinoUserError(type=USER_ERROR, name=INVALID_PROCEDURE_ARGUMENT, message="Retention specified (0.00d) is shorter than the minimum retention configured in the system (7.00d). Minimum retention can be changed with iceberg.expire_snapshots.min-retention configuration property or iceberg.expire_snapshots_min_retention session property", query_id=20260305_191945_00444_dffp9)
 
-| content_type |	count_files	| total_file_size_mb | avg_file_size_mb |
-| :- | :- | :- | :- |
-| data file	| 13	| 	64.836 |	5.037|
-
-This shows only data files and all not more needed data in old snapshots are purged.
 
 ## Lab 7 - Materialized View
-Reminder: use your own “db\_user001”..”db\_user020” database.
 
 Materialized views (MV) cause Trino to transparently rewrite queries, when possible, to use the MV instead of the base tables.
 
