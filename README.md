@@ -1006,9 +1006,9 @@ AND upper(table_name) like 'MV%';
 ```
 Expected Output
 
-|SCHEMA_NAME | TABLE_NAME |
-| :- | :- |
-| db_user001 | traffic_cancel_airlines|
+|table_catalog | schedule_name | table_name |
+| :- | :- | :- |
+| iceberg | db_user001 | traffic_cancel_airlines|
 
 Running a query for part of the materialized view.
 
