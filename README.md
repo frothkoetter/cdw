@@ -703,154 +703,12 @@ This comparison perfectly illustrates the performance benefits of Iceberg Partit
 
 This example shows that the execution time is greatly decreased because less data was read.
 
-## ⚠️ Lab 5 - Data Quality with Branching **** WORK IN PROGRESS *** ⚠️
 
-The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. It is imperative to conduct thorough testing, cleansing and validation of data at every stage of the data pipeline before deployment into the production.
+## Lab 5 - Snapshots
 
-The QA pipeline looks like the following:
-![](images/cdw-lab6-qa001C.png)
+In Apache Iceberg, a Snapshot represents the state of a table at a specific point in time. Every write operation (Append, Delete, Overwrite, or Optimize) creates a new snapshot, which acts as a complete, immutable version of the dataset
 
-Begin with the creation of ICEBERG V2 table with the raw data and run the first test checking  the field length for the IATA code that must be 3:
-
-```sql
-/* ** QA TEST: Validate IATA length (Must be exactly 3)
-** EXPECTATION: failures = 0
-*/
-SELECT
-    count(*) AS failures,
-    count(*) != 0 AS should_warn,
-    count(*) != 0 AS should_error
-FROM (
-    WITH validation AS (
-        SELECT iata AS field
-        FROM iceberg.${your_dbname}.dim_airports
-        WHERE iata IS NOT NULL -- Exclude nulls from length check
-    ),
-    validation_errors AS (
-        SELECT field
-        FROM validation
-        WHERE length(field) != 3
-    )
-    SELECT * FROM validation_errors
-) AS iata_length_test;
-```
-
-The test shows that 42 rows are not having the correct length.
-
-|failures |	should_warn	| should_error |
-| :- | :- |  :- |
-| 42 |	true |	true |
-
-NOTE: it's good practice to have a warning level i.e. here 10 rows may is acceptable and does not require cleaning.
-
-Then create a branch with the name QA.
-
-```SQL
-/*
-** find the snapshot_id
-*/
-SELECT
-  snapshot_id,
-  committed_at,
-  parent_id,
-  operation
-FROM
-  iceberg.${your_dbname}."dim_airports$snapshots";
-```
-
-| snapshot_id |	committed_at |	parent_id |	operation
-| :- | :- |  :- | :- | :- |
-| 6720208314915384918 |	2026-03-03 09:15:37.781 UTC	| NULL	| append |
-
-```SQL
--- Create a branch named 'v1_original' from your initial snapshot
-ALTER TABLE iceberg.${your_dbname}.fct_flights
-CREATE BRANCH QA
-AS OF VERSION
-
-ALTER TABLE iceberg.${your_dbname}.dim_airports EXECUTE create_branch('QA')
-ALTER TABLE table_name EXECUTE create_branch('branch_name')
-
--- Query a branch: SELECT * FROM "table_name$branch_branch_name"
--- select * from iceberg.${your_dbname}.dim_airports.refs;
-```
-
-The list of branches are as follows:
-
-|name	|type	|snapshot_id |	max_reference_age_in_ms |	min_snapshots_to_keep	| max_snapshot_age_in_ms |
-| :- | :- |  :- | :- | :- |  :- |
-|qa	|BRANCH	|4861947596552380217	|NULL	|NULL	|NULL|
-|main	|BRANCH	|4861947596552380217	|NULL	|NULL	|NULL
-
-The main branch always exists a base when creating the Iceberg table.
-
-Now do the cleaning job and delete rows where the IATA code is != 3 and remove the quotation marks from the AIRPORT field.
-
-```SQL
-/*
-** Data Cleansing: data transformations
-*/
-⚠️ delete from ${your_dbname}.airports_ice.branch_qa
-where LENGTH(iata) != 3;
-```
-
-Output should like this:
-
- Success.
-
-Next is to validate the data we have cleansed to be on the save side.
-
-```SQL
- /*
- ** Validate: not iata len <> 3
- */
- select
-       count(*) as failures,
-       count(*) != 0 as should_warn,
-       count(*) > 100 as should_error
- from (
-       with validation as (
- 	                         select iata as field
- 	                          from ${your_dbname}.airports_ice.branch_qa
-                          ),
- validation_errors as (
- 	select field from validation
- 	where LENGTH(field) != 3
- )
- select *
- from validation_errors
- ) iata_length_test;
-```
-
-Expected Output:
-
- |failures |	should_warn	| should_error |
- | :- | :- |  :- |
- | 0 |	false |	false |
-
-
-Both validations show no failures and we can move the data from the QA branch into the main branch and drop the QA branch for housekeeping.
-
- ```SQL
- -- Drop a branch: ALTER TABLE table_name EXECUTE drop_branch('branch_name')
-⚠️
-ALTER table airports_ice EXECUTE FAST-FORWARD 'qa';
-
-ALTER TABLE airports_ice DROP BRANCH if exists qa;
-
-select * from ${your_dbname}.airports_ice.refs;
-```
-
-Output:
-
-|name	|type	|snapshot_id |	max_reference_age_in_ms |	min_snapshots_to_keep	| max_snapshot_age_in_ms |
-| :- | :- |  :- | :- | :- |  :- |
-|main	|BRANCH	|4861947596552380217	|NULL	|NULL	|NULL
-
-
-This lab you saw how Iceberg branching feature helping data quality pipelines in a data engineering workflow.
-
-## Lab 6 - Table Optimize (Compaction)
+![](images/cdw-Snapshots-001.png)
 
 ### Merge-on-Read (Position Deletes).
 
@@ -1343,6 +1201,154 @@ Results
 
 
 # Bonus Material (optional)
+
+## ⚠️  Data Quality with Branching **** WORK IN PROGRESS *** ⚠️
+
+The quality of data holds immense importance within any data engineering process, directly influencing subsequent analytical tasks like business intelligence and machine learning. It is imperative to conduct thorough testing, cleansing and validation of data at every stage of the data pipeline before deployment into the production.
+
+The QA pipeline looks like the following:
+![](images/cdw-lab6-qa001C.png)
+
+Begin with the creation of ICEBERG V2 table with the raw data and run the first test checking  the field length for the IATA code that must be 3:
+
+```sql
+/* ** QA TEST: Validate IATA length (Must be exactly 3)
+** EXPECTATION: failures = 0
+*/
+SELECT
+    count(*) AS failures,
+    count(*) != 0 AS should_warn,
+    count(*) != 0 AS should_error
+FROM (
+    WITH validation AS (
+        SELECT iata AS field
+        FROM iceberg.${your_dbname}.dim_airports
+        WHERE iata IS NOT NULL -- Exclude nulls from length check
+    ),
+    validation_errors AS (
+        SELECT field
+        FROM validation
+        WHERE length(field) != 3
+    )
+    SELECT * FROM validation_errors
+) AS iata_length_test;
+```
+
+The test shows that 42 rows are not having the correct length.
+
+|failures |	should_warn	| should_error |
+| :- | :- |  :- |
+| 42 |	true |	true |
+
+NOTE: it's good practice to have a warning level i.e. here 10 rows may is acceptable and does not require cleaning.
+
+Then create a branch with the name QA.
+
+```SQL
+/*
+** find the snapshot_id
+*/
+SELECT
+  snapshot_id,
+  committed_at,
+  parent_id,
+  operation
+FROM
+  iceberg.${your_dbname}."dim_airports$snapshots";
+```
+
+| snapshot_id |	committed_at |	parent_id |	operation
+| :- | :- |  :- | :- | :- |
+| 6720208314915384918 |	2026-03-03 09:15:37.781 UTC	| NULL	| append |
+
+```SQL
+-- Create a branch named 'v1_original' from your initial snapshot
+ALTER TABLE iceberg.${your_dbname}.fct_flights
+CREATE BRANCH QA
+AS OF VERSION
+
+ALTER TABLE iceberg.${your_dbname}.dim_airports EXECUTE create_branch('QA')
+ALTER TABLE table_name EXECUTE create_branch('branch_name')
+
+-- Query a branch: SELECT * FROM "table_name$branch_branch_name"
+-- select * from iceberg.${your_dbname}.dim_airports.refs;
+```
+
+The list of branches are as follows:
+
+|name	|type	|snapshot_id |	max_reference_age_in_ms |	min_snapshots_to_keep	| max_snapshot_age_in_ms |
+| :- | :- |  :- | :- | :- |  :- |
+|qa	|BRANCH	|4861947596552380217	|NULL	|NULL	|NULL|
+|main	|BRANCH	|4861947596552380217	|NULL	|NULL	|NULL
+
+The main branch always exists a base when creating the Iceberg table.
+
+Now do the cleaning job and delete rows where the IATA code is != 3 and remove the quotation marks from the AIRPORT field.
+
+```SQL
+/*
+** Data Cleansing: data transformations
+*/
+⚠️ delete from ${your_dbname}.airports_ice.branch_qa
+where LENGTH(iata) != 3;
+```
+
+Output should like this:
+
+ Success.
+
+Next is to validate the data we have cleansed to be on the save side.
+
+```SQL
+ /*
+ ** Validate: not iata len <> 3
+ */
+ select
+       count(*) as failures,
+       count(*) != 0 as should_warn,
+       count(*) > 100 as should_error
+ from (
+       with validation as (
+ 	                         select iata as field
+ 	                          from ${your_dbname}.airports_ice.branch_qa
+                          ),
+ validation_errors as (
+ 	select field from validation
+ 	where LENGTH(field) != 3
+ )
+ select *
+ from validation_errors
+ ) iata_length_test;
+```
+
+Expected Output:
+
+ |failures |	should_warn	| should_error |
+ | :- | :- |  :- |
+ | 0 |	false |	false |
+
+
+Both validations show no failures and we can move the data from the QA branch into the main branch and drop the QA branch for housekeeping.
+
+ ```SQL
+ -- Drop a branch: ALTER TABLE table_name EXECUTE drop_branch('branch_name')
+⚠️
+ALTER table airports_ice EXECUTE FAST-FORWARD 'qa';
+
+ALTER TABLE airports_ice DROP BRANCH if exists qa;
+
+select * from ${your_dbname}.airports_ice.refs;
+```
+
+Output:
+
+|name	|type	|snapshot_id |	max_reference_age_in_ms |	min_snapshots_to_keep	| max_snapshot_age_in_ms |
+| :- | :- |  :- | :- | :- |  :- |
+|main	|BRANCH	|4861947596552380217	|NULL	|NULL	|NULL
+
+
+This lab you saw how Iceberg branching feature helping data quality pipelines in a data engineering workflow.
+
 
 ## Lab - Data Security & Governance
 
