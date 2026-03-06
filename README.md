@@ -542,169 +542,9 @@ Result:
 |3 |05Q |Comlux Aviation |
 
 ------
-## Lab 4 - Time Travel and Partition Evolution
-
-Apache Iceberg is a high-performance format for huge analytic tables for engines like Spark, Impala Flink and Hive to safely work with the same tables, at the same time.
-
-Creating a partitioned table with CREATE TABLE ... PARTITIONED BY & STORED BY ICEBERG syntax enables you to create identity-partitioned Iceberg tables. Identity-partitioned Iceberg tables are similar to the regular partitioned tables and are stored in the same directory structure as the regular partitioned tables.
-
-Lets create a new table with Iceberg format and insert rows in batches:
-
-```sql
-DROP TABLE IF EXISTS iceberg.${your_dbname}.fct_flights_history_lab;
-
--- Create a sandbox table for the year 1995
-CREATE TABLE iceberg.${your_dbname}.flights_history_lab
-WITH (format = 'PARQUET')
-AS
-SELECT * FROM iceberg.${your_dbname}.fct_flights
-WHERE year = 1995 AND month <= 6;
-
--- Insert a second batch of data (This creates a second snapshot)
-INSERT INTO iceberg.${your_dbname}.flights_history_lab
-SELECT * FROM iceberg.${your_dbname}.fct_flights
-WHERE year = 1995 AND month > 6;
-
-```
-
-Now all rows for one year inserted into the table fct_flights_history_lab.
-
-Check the count of all rows inserted previouly:
-
-```sql
-select
- count(*) row_count
-from
- iceberg.${your_dbname}.flights_history_lab;
-```
-
-Result:
-
-| row_count |
-| :- |
-| 5327435 |
 
 
-Now see the snapshots of the table.
-
-```sql
--- View the snapshots and timestamps
-SELECT snapshot_id, parent_id, operation, committed_at
-FROM iceberg.${your_dbname}."fct_flights_history_lab$snapshots";
-```
-Output:
-
-| snapshot_id |	parent_id	| operation	| committed_at |
-| :- | :- | :- | :- |
-| 2276194921605653543 |	NULL |	append |	2026-03-04 12:50:46.050 UTC |
-| 4971137753967299831 |	2276194921605653543	|append	|2026-03-04 12:52:00.308 UTC |
-
-Time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME.
-
-Pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace ***SNAPSHOT_ID***
-
-```sql
-SELECT
-    year,
-    month,
-    count(*) as row_count
-FROM
-    iceberg.${your_dbname}.fct_flights_history_lab
-FOR VERSION AS OF *************** -- Use SNAPSHOT_ID
-GROUP BY
-    year,month
-ORDER BY
-    year, month;
-```
-
-Result: Only data from the first insert Year: 1995 Months 1-6
-
-|year	| month	|row_count |
-| :- | :- | :- |
-|1995	| 1	| 464933 |
-|1995	| 2	| 418312 |
-|1995	| 3	| 461503 |
-|1995	| 4	| 441074 |
-|1995	| 5	| 448341 |
-|1995	| 6	| 439423 |
-
-
-Partition Evolution is a feature when table layout can be updated as data or queries change and  users are not required to maintain partition columns.
-
-![](images/IcebergPartitionEvo.png)
-
-With Iceberg’s hidden partitions the tables separation between physical and logical users avoid reading unnecessary partitions and don’t need to know how the table is partitioned and add extra filters to their queries.
-
-Lets change the partition schema to YEAR & MONTH & DAYOFMONTH and insert data of *ONE* day
-
-```sql
--- Trino uses the ALTER TABLE SET PROPERTIES syntax for Iceberg evolution
-ALTER TABLE iceberg.${your_dbname}.fct_flights_history_lab
-SET PROPERTIES partitioning = ARRAY['year', 'month', 'dayofmonth'];
-
-INSERT INTO iceberg.${your_dbname}.fct_flights_history_lab (
-    year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,
-    uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime,
-    arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled,
-    cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay,
-    securitydelay, lateaircraftdelay
-)
-SELECT
-    2026, 1, 1, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,
-    uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime,
-    arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled,
-    cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay,
-    securitydelay, lateaircraftdelay
-FROM
-    iceberg.${your_dbname}.fct_flights
-WHERE
-    year = 1995 AND month = 1 AND dayofmonth = 1;
-```
-Output:
-| row_count |
-| :- |
-| 14175 |
-
-Now lets see the impact what the difference is, lets run two queries and note the complete time:
-
-Count the records for one year and month that is inserted before the partition:
-```sql
--- Query 1: Data from the first insert (Older partition spec)
-EXPLAIN ANALYZE
-SELECT
-    count(*) as row_count,
-    sum(depdelay) as total_dep_delay
-FROM
-    iceberg.${your_dbname}.flights_ice
-WHERE  
-    year = 1995 AND month = 1 AND dayofmonth = 1;
-```
-
-```sql
--- Query 2: Data from the second insert (Newer evolved partition)
-EXPLAIN ANALYZE
-SELECT
-    count(*) as row_count,
-    sum(depdelay) as total_dep_delay
-FROM
-    iceberg.${your_dbname}.fct_flights_history_lab
-WHERE  
-    year = 2026 AND month = 1 AND dayofmonth = 1;
- ```
-This comparison perfectly illustrates the performance benefits of Iceberg Partition Evolution. In the second plan, the data was written after the partition spec was made more granular, while the first plan shows a query hitting data written before the evolution.
-
-| Metric | Query 2 (Year 2026) | Query 1 (Year 1995) |
-| :- | :- | :- |
-| Total Execution Time | 214.92 ms 🚀 | 385.49 ms 🐢 |
-| Rows Scanned (Input) | 14,175 rows | 2,673,586 rows |
-| Physical Input Size | 257.18 kB | 5.08 MB |
-| Filter Efficiency | 0% Filtered (Direct hit) | 99.47% Filtered (Over-scan) |
-| Physical Input Time | 0.64 ms | 284.63 ms |
-
-This example shows that the execution time is greatly decreased because less data was read.
-
-
-## Lab 5 - Snapshots
+## Lab 4 - Snapshots
 
 In Apache Iceberg, a Snapshot represents the state of a table at a specific point in time. Every write operation (Append, Delete, Overwrite, or Optimize) creates a new snapshot, which acts as a complete, immutable version of the dataset
 
@@ -917,7 +757,7 @@ FROM
 The rollback is "dangerous" because it makes all your recent work (the 5.7M deletions and optimizations) "invisible" to the main table. However, in Iceberg, those files aren't physically deleted immediately—they stay in storage until an expire_snapshots command is run.
 
 
-## Tables Maintenance
+## Lab 5 - Tables Maintenance
 
 The OPTIMIZE procedure performs a compaction by rewriting fragmented data and "baking" any existing delete files into new, clean Parquet files. This transition from Merge-on-Read to a flat data structure eliminates the runtime overhead of masking rows, significantly accelerating future query performance.
 
@@ -956,6 +796,166 @@ GROUP BY 1;
 
 Your table is now fully optimized with 80.5 million rows stored in 88 clean data files and zero delete debt, ensuring maximum read performance.
 
+## Lab 6 - Time Travel and Partition Evolution
+
+Apache Iceberg is a high-performance format for huge analytic tables for engines like Spark, Impala Flink and Hive to safely work with the same tables, at the same time.
+
+Creating a partitioned table with CREATE TABLE ... PARTITIONED BY & STORED BY ICEBERG syntax enables you to create identity-partitioned Iceberg tables. Identity-partitioned Iceberg tables are similar to the regular partitioned tables and are stored in the same directory structure as the regular partitioned tables.
+
+Lets create a new table with Iceberg format and insert rows in batches:
+
+```sql
+DROP TABLE IF EXISTS iceberg.${your_dbname}.fct_flights_history_lab;
+
+-- Create a sandbox table for the year 1995
+CREATE TABLE iceberg.${your_dbname}.flights_history_lab
+WITH (format = 'PARQUET')
+AS
+SELECT * FROM iceberg.${your_dbname}.fct_flights
+WHERE year = 1995 AND month <= 6;
+
+-- Insert a second batch of data (This creates a second snapshot)
+INSERT INTO iceberg.${your_dbname}.flights_history_lab
+SELECT * FROM iceberg.${your_dbname}.fct_flights
+WHERE year = 1995 AND month > 6;
+
+```
+
+Now all rows for one year inserted into the table fct_flights_history_lab.
+
+Check the count of all rows inserted previouly:
+
+```sql
+select
+ count(*) row_count
+from
+ iceberg.${your_dbname}.flights_history_lab;
+```
+
+Result:
+
+| row_count |
+| :- |
+| 5327435 |
+
+
+Now see the snapshots of the table.
+
+```sql
+-- View the snapshots and timestamps
+SELECT snapshot_id, parent_id, operation, committed_at
+FROM iceberg.${your_dbname}."fct_flights_history_lab$snapshots";
+```
+Output:
+
+| snapshot_id |	parent_id	| operation	| committed_at |
+| :- | :- | :- | :- |
+| 2276194921605653543 |	NULL |	append |	2026-03-04 12:50:46.050 UTC |
+| 4971137753967299831 |	2276194921605653543	|append	|2026-03-04 12:52:00.308 UTC |
+
+Time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME.
+
+Pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace ***SNAPSHOT_ID***
+
+```sql
+SELECT
+    year,
+    month,
+    count(*) as row_count
+FROM
+    iceberg.${your_dbname}.fct_flights_history_lab
+FOR VERSION AS OF *************** -- Use SNAPSHOT_ID
+GROUP BY
+    year,month
+ORDER BY
+    year, month;
+```
+
+Result: Only data from the first insert Year: 1995 Months 1-6
+
+|year	| month	|row_count |
+| :- | :- | :- |
+|1995	| 1	| 464933 |
+|1995	| 2	| 418312 |
+|1995	| 3	| 461503 |
+|1995	| 4	| 441074 |
+|1995	| 5	| 448341 |
+|1995	| 6	| 439423 |
+
+
+Partition Evolution is a feature when table layout can be updated as data or queries change and  users are not required to maintain partition columns.
+
+![](images/IcebergPartitionEvo.png)
+
+With Iceberg’s hidden partitions the tables separation between physical and logical users avoid reading unnecessary partitions and don’t need to know how the table is partitioned and add extra filters to their queries.
+
+Lets change the partition schema to YEAR & MONTH & DAYOFMONTH and insert data of *ONE* day
+
+```sql
+-- Trino uses the ALTER TABLE SET PROPERTIES syntax for Iceberg evolution
+ALTER TABLE iceberg.${your_dbname}.fct_flights_history_lab
+SET PROPERTIES partitioning = ARRAY['year', 'month', 'dayofmonth'];
+
+INSERT INTO iceberg.${your_dbname}.fct_flights_history_lab (
+    year, month, dayofmonth, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,
+    uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime,
+    arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled,
+    cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay,
+    securitydelay, lateaircraftdelay
+)
+SELECT
+    2026, 1, 1, dayofweek, deptime, crsdeptime, arrtime, crsarrtime,
+    uniquecarrier, flightnum, tailnum, actualelapsedtime, crselapsedtime, airtime,
+    arrdelay, depdelay, origin, dest, distance, taxiin, taxiout, cancelled,
+    cancellationcode, diverted, carrierdelay, weatherdelay, nasdelay,
+    securitydelay, lateaircraftdelay
+FROM
+    iceberg.${your_dbname}.fct_flights
+WHERE
+    year = 1995 AND month = 1 AND dayofmonth = 1;
+```
+Output:
+| row_count |
+| :- |
+| 14175 |
+
+Now lets see the impact what the difference is, lets run two queries and note the complete time:
+
+Count the records for one year and month that is inserted before the partition:
+```sql
+-- Query 1: Data from the first insert (Older partition spec)
+EXPLAIN ANALYZE
+SELECT
+    count(*) as row_count,
+    sum(depdelay) as total_dep_delay
+FROM
+    iceberg.${your_dbname}.flights_ice
+WHERE  
+    year = 1995 AND month = 1 AND dayofmonth = 1;
+```
+
+```sql
+-- Query 2: Data from the second insert (Newer evolved partition)
+EXPLAIN ANALYZE
+SELECT
+    count(*) as row_count,
+    sum(depdelay) as total_dep_delay
+FROM
+    iceberg.${your_dbname}.fct_flights_history_lab
+WHERE  
+    year = 2026 AND month = 1 AND dayofmonth = 1;
+ ```
+This comparison perfectly illustrates the performance benefits of Iceberg Partition Evolution. In the second plan, the data was written after the partition spec was made more granular, while the first plan shows a query hitting data written before the evolution.
+
+| Metric | Query 2 (Year 2026) | Query 1 (Year 1995) |
+| :- | :- | :- |
+| Total Execution Time | 214.92 ms 🚀 | 385.49 ms 🐢 |
+| Rows Scanned (Input) | 14,175 rows | 2,673,586 rows |
+| Physical Input Size | 257.18 kB | 5.08 MB |
+| Filter Efficiency | 0% Filtered (Direct hit) | 99.47% Filtered (Over-scan) |
+| Physical Input Time | 0.64 ms | 284.63 ms |
+
+This example shows that the execution time is greatly decreased because less data was read.
 
 ## Lab 7 - Materialized View
 
