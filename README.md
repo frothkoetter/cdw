@@ -965,10 +965,10 @@ Create Materialized View of a join of two tables with aggregation.
 
 ```sql
 -- 1. DROP MV if exists
-DROP MATERIALIZED VIEW IF EXISTS iceberg.${your_dbname}.traffic_cancel_airlines;
+DROP MATERIALIZED VIEW IF EXISTS iceberg.${your_dbname}.mv_traffic_cancel_airlines;
 
 -- 2. Create the Materialized View in the Iceberg catalog
-CREATE MATERIALIZED VIEW iceberg.${your_dbname}.traffic_cancel_airlines
+CREATE MATERIALIZED VIEW iceberg.${your_dbname}.mv_traffic_cancel_airlines
 AS SELECT
     airlines.code AS code,  
     airlines.description AS airline_name,
@@ -994,14 +994,21 @@ Note: The time to create the MV takes apporox. 3-5 minutes.
 Checking that the materialized view is created.
 
 ```sql
-SHOW MATERIALIZED VIEWS;
+-- work in progress: SHOW MATERIALIZED VIEWS
+-- workaround
+SELECT
+    table_catalog,
+    table_schema,
+    table_name
+FROM iceberg.information_schema.tables
+WHERE table_schema = '${your_dbname}'
+AND upper(table_name) like 'MV%';
 ```
+Expected Output
 
-Results
-
-|MV_NAME | REWRITE_ENABLED |  MODE  | incremental_rebuild |
-| :- | :- | :- | :- |
-|traffic_cancel_airlines|Yes	| Manual refresh | Available |
+|SCHEMA_NAME | TABLE_NAME |
+| :- | :- |
+| db_user001 | traffic_cancel_airlines|
 
 Running a query for part of the materialized view.
 
