@@ -849,47 +849,25 @@ The deleted rows are marked into files and keeps the rows in the original data f
 
 What is most interesting here is that you have captured two completely different physical behaviors in Iceberg, triggered by how much data you were deleting. Trino automatically switched between Merge-on-Read (using Delete Files) and Metadata-only Deletion (dropping whole partitions).
 
-### Optimize
+### Snapshots Maintenance
 
-The OPTIMIZE procedure performs a compaction by rewriting fragmented data and "baking" any existing delete files into new, clean Parquet files. This transition from Merge-on-Read to a flat data structure eliminates the runtime overhead of masking rows, significantly accelerating future query performance.
-
-Once completed, the $snapshots table will record a replace operation, indicating that the old, inefficient data and delete files have been replaced by these newly consolidated versions.
+To remove the unused data we now expire the snapshots and remove the data pyhsically. After the optimize is done, the old files (the ones with the deleted rows) still sit on S3/HDFS for a few days in case you want to "Time Travel" back. If you want to save storage space immediately, you can follow up with:
 
 ```sql
 /*
-** Optimize the files
+** expire all snapshots that will remove all unused the data and delete files
 */
--- This "bakes" the 1995 deletes into new, clean data files
+
+SQL
+-- Removes the old, unoptimized physical files from storage
 ALTER TABLE iceberg.${your_dbname}.fct_flights
-EXECUTE optimize
-WHERE year = 1995;
+EXECUTE expire_snapshots(retention_threshold => '0d');
 ```
-Note: this may need some time to finish.
+Expected outcome:
 
-After running this, if you check your $snapshots table again, you will see a new replace operation:
+TrinoUserError(type=USER_ERROR, name=INVALID_PROCEDURE_ARGUMENT, message="Retention specified (0.00d) is shorter than the minimum retention configured in the system (7.00d). Minimum retention can be changed with iceberg.expire_snapshots.min-retention configuration property or iceberg.expire_snapshots_min_retention session property", query_id=20260305_191945_00444_dffp9)
 
-```sql
-SELECT
-    CASE content
-        WHEN 0 THEN 'Data File (Clean)'
-        WHEN 1 THEN 'Position Delete (Debt)'
-        WHEN 2 THEN 'Equality Delete (Debt)'
-    END AS file_type,
-    count(*) AS file_count,
-    sum(record_count) AS total_records,
-    round(sum(file_size_in_bytes) / 1024.0 / 1024.0, 2) AS size_mb
-FROM iceberg.${your_dbname}."fct_flights$files"
--- WHERE partition['year'] = 1995 -- Filter specifically for the optimized year
-GROUP BY 1;
-```
-| file_type	| file_count |	total_records |	size_mb |
-| :- | :- | :- | :- |
-| Data File (Clean) |	88 |	80561074 |	1037.5 |
-
-Your table is now fully optimized with 80.5 million rows stored in 88 clean data files and zero delete debt, ensuring maximum read performance.
-
-
-### Lab 6 - Table Rollback (optional)
+### Table Rollback
 
 The final step is the Rollback, which restores your table to its original state by resetting the metadata "pointer" to the very first snapshot.
 
@@ -938,23 +916,45 @@ FROM
 ⚠️ Important Note on "DANGER"
 The rollback is "dangerous" because it makes all your recent work (the 5.7M deletions and optimizations) "invisible" to the main table. However, in Iceberg, those files aren't physically deleted immediately—they stay in storage until an expire_snapshots command is run.
 
-### Lab 6 - Snapshots Maintenance (optional)
 
-To remove the unused data we now expire the snapshots and remove the data pyhsically. After the optimize is done, the old files (the ones with the deleted rows) still sit on S3/HDFS for a few days in case you want to "Time Travel" back. If you want to save storage space immediately, you can follow up with:
+## Tables Maintenance
+
+The OPTIMIZE procedure performs a compaction by rewriting fragmented data and "baking" any existing delete files into new, clean Parquet files. This transition from Merge-on-Read to a flat data structure eliminates the runtime overhead of masking rows, significantly accelerating future query performance.
+
+Once completed, the $snapshots table will record a replace operation, indicating that the old, inefficient data and delete files have been replaced by these newly consolidated versions.
 
 ```sql
 /*
-** expire all snapshots that will remove all unused the data and delete files
+** Optimize the files
 */
-
-SQL
--- Removes the old, unoptimized physical files from storage
+-- This "bakes" the 1995 deletes into new, clean data files
 ALTER TABLE iceberg.${your_dbname}.fct_flights
-EXECUTE expire_snapshots(retention_threshold => '0d');
+EXECUTE optimize
+WHERE year = 1995;
 ```
-Expected outcome:
+Note: this may need some time to finish.
 
-TrinoUserError(type=USER_ERROR, name=INVALID_PROCEDURE_ARGUMENT, message="Retention specified (0.00d) is shorter than the minimum retention configured in the system (7.00d). Minimum retention can be changed with iceberg.expire_snapshots.min-retention configuration property or iceberg.expire_snapshots_min_retention session property", query_id=20260305_191945_00444_dffp9)
+After running this, if you check your $snapshots table again, you will see a new replace operation:
+
+```sql
+SELECT
+    CASE content
+        WHEN 0 THEN 'Data File (Clean)'
+        WHEN 1 THEN 'Position Delete (Debt)'
+        WHEN 2 THEN 'Equality Delete (Debt)'
+    END AS file_type,
+    count(*) AS file_count,
+    sum(record_count) AS total_records,
+    round(sum(file_size_in_bytes) / 1024.0 / 1024.0, 2) AS size_mb
+FROM iceberg.${your_dbname}."fct_flights$files"
+-- WHERE partition['year'] = 1995 -- Filter specifically for the optimized year
+GROUP BY 1;
+```
+| file_type	| file_count |	total_records |	size_mb |
+| :- | :- | :- | :- |
+| Data File (Clean) |	88 |	80561074 |	1037.5 |
+
+Your table is now fully optimized with 80.5 million rows stored in 88 clean data files and zero delete debt, ensuring maximum read performance.
 
 
 ## Lab 7 - Materialized View
