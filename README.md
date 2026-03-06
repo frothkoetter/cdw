@@ -771,7 +771,7 @@ ORDER BY
 Expected output:
 
 | snapshot_id |	committed_at | operation |	metric_name |	metric_value |
-| :- | :- | :- | :- |
+| :- | :- | :- | :- | :- |
 | 3769149312242635307	| 2026-03-05 18:42:44.182 UTC | delete |	added-position-delete-files |	6 |
 | 3769149312242635307	| 2026-03-05 18:42:44.182 UTC	| delete | added-position-deletes |	45202 |
 
