@@ -249,9 +249,17 @@ CREATE TABLE iceberg.${your_dbname}.dim_airports
 WITH (format = 'PARQUET')
 AS
 SELECT
-    iata, airport, city, state, country,
-    CAST(NULLIF(lat, '') AS DOUBLE) as lat,
-    CAST(NULLIF(lon, '') AS DOUBLE) as lon
+    iata,
+    airport,
+    city,
+    state,
+    country,
+    -- If 'lat' contains 'USA', it means the row shifted right.
+    -- We take the value from 'lon' instead.
+    CAST(NULLIF(CASE WHEN lat = 'USA' THEN lon ELSE lat END, '') AS DOUBLE) as lat,
+    -- In shifted rows, the real longitude is pushed into an 8th column
+    -- which we can't see here, but most of your data will be fine.
+    CAST(NULLIF(CASE WHEN lat = 'USA' THEN NULL ELSE lon END, '') AS DOUBLE) as lon
 FROM hive.${your_dbname}.airports_csv;
 
 -- 3. Planes Table
