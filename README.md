@@ -22,8 +22,8 @@ Navigate to Data Warehouse, then Trino Virtual Warehouse and open the HUE SQL Au
 Create new schema for your user to be used, or use one that is already created for you.
 
 ```sql
--- 1. Create the schema in the Iceberg catalog
-CREATE SCHEMA iceberg.db_user001;
+-- 1. Create the schema in the catalogs for Hive and Iceberg
+CREATE SCHEMA db_user001;
 
 -- 2. Switch your session context to the Iceberg catalog and your new schema
 USE iceberg.db_user001;
@@ -1054,7 +1054,6 @@ Output:
 ----
 ```
 
-
 ----
 ## Lab 8 - Slowly Changing Dimensions (SCD) - TYPE 2
 
@@ -1071,109 +1070,149 @@ We create a new SDC table ***airline\_scd*** and add columns ***valid\_from*** a
 Create the Hive managed table for airlines. Load initial by copy 1000 rows of current airlines with hard code the valid_from date
 
 ```sql
-drop table if exists airlines_scd;
+-- Drop and recreate the target Iceberg table
+DROP TABLE IF EXISTS iceberg.${your_dbname}.scd_airlines;
 
-create table airlines_scd(code string, description string, updated_at timestamp, valid_from timestamp, valid_to timestamp);
+CREATE TABLE iceberg.${your_dbname}.scd_airlines (
+    code VARCHAR,
+    description VARCHAR,
+    updated_at TIMESTAMP(6),
+    valid_from TIMESTAMP(6),
+    valid_to TIMESTAMP(6)
+)
+WITH (format = 'PARQUET');
 
-insert into airlines_scd
-    select *, current_date(), cast('2021-01-01' as timestamp), cast('9999-01-01' as timestamp)
-    from airlines_csv;
-
+-- Initial load from Hive to Iceberg
+INSERT INTO iceberg.${your_dbname}.scd_airlines
+SELECT
+    code,
+    description,
+    CAST(current_timestamp AS TIMESTAMP(6)), -- updated_at
+    CAST(TIMESTAMP '2021-01-01 00:00:00' AS TIMESTAMP(6)), -- valid_from
+    CAST(TIMESTAMP '9999-12-31 23:59:59' AS TIMESTAMP(6))  -- valid_to
+FROM hive.${your_dbname}.airlines_csv;
 ```
 
 Create an external staging table pointing to our complete airlines dataset (1491 records), add one row, update a description and delete two rows to mockup a change in the dimension
 
 ```sql
-drop table if exists airlines_stage;
+DROP TABLE IF EXISTS iceberg.${your_dbname}.airlines_stage;
 
-create table airlines_stage as select * from airlines_csv;
+-- Create stage with current data
+CREATE TABLE iceberg.${your_dbname}.airlines_stage AS
+SELECT code, description FROM hive.${your_dbname}.airlines_csv;
 
-insert into airlines_stage
-   values ('FFF','New Airline');
+-- 1. Insert one row
+INSERT INTO iceberg.${your_dbname}.airlines_stage (code, description)
+VALUES ('FFF', 'New Airline');
 
-update airlines_stage
-set
- description = concat('Update - ',upper(description))
-where
- code in ('02Q');
+-- 2. Update a description
+UPDATE iceberg.${your_dbname}.airlines_stage
+SET description = concat('Update - ', upper(description))
+WHERE code = '02Q';
 
-delete from airlines_stage
- where
-   code in ('04Q');
+-- 3. Delete a row
+DELETE FROM iceberg.${your_dbname}.airlines_stage
+WHERE code = '04Q';
 ```
 
 Finally merging these two tables with a single MERGE command to maintain the historical data and check the results.
 
 ```sql
-merge into airlines_scd as target
-using  (
-select
-   'update - change the old row' as ops,
-   source.code as join_key,
-   source.code,
-   source.description
-   from
-    airlines_stage as source
-   where exists (
-            select 1 from airlines_scd as target
-               where source.code = target.code
-               and  source.description <> target.description )
-union all
-select
-   'update - insert row' as ops,
-    null as join_key,
-    airlines_stage.code,
-    airlines_stage.description
- from
-   airlines_stage join airlines_scd on airlines_stage.code = airlines_scd.code
- where
-   ( airlines_stage.description <> airlines_scd.description )
-union all
-select
-    'insert' as ops,
-    null as join_key,
-    source.code,
-    source.description
-  from
-    airlines_stage as source
-  where not exists (
-        select 1 from airlines_scd as target
-          where target.code = source.code)
-union all
-select
-    'delete' as cmd,
-    target.code as join_key,
-    target.code,
-    target.description
-  from
-      airlines_scd as target
-  where not exists (
-        select 1 from airlines_stage as source
-          where target.code = source.code)
-) source
-on source.join_key = target.code
-when matched
- then update
-    set valid_to = current_timestamp(), updated_at = current_timestamp()
-when not matched
- then insert
-    values (source.code, source.description, current_timestamp(), current_timestamp(), cast('9999-01-01' as timestamp) );
+MERGE INTO iceberg.${your_dbname}.scd_airlines AS target
+USING (
+    -- PART A: New records that don't exist at all
+    SELECT
+        src.code AS merge_key,
+        src.code,
+        src.description,
+        'INSERT' as action
+    FROM iceberg.${your_dbname}.airlines_stage src
+    LEFT JOIN iceberg.${your_dbname}.scd_airlines tgt
+        ON src.code = tgt.code
+    WHERE tgt.code IS NULL
+
+    UNION ALL
+
+    -- PART B: Records that changed (This row will EXPIRE the old record)
+    -- We join on code and only take the currently active record
+    SELECT
+        src.code AS merge_key,
+        src.code,
+        src.description,
+        'UPDATE_EXPIRE' as action
+    FROM iceberg.${your_dbname}.airlines_stage src
+    JOIN iceberg.${your_dbname}.scd_airlines tgt
+        ON src.code = tgt.code
+    WHERE src.description <> tgt.description
+      AND tgt.valid_to > current_timestamp
+
+    UNION ALL
+
+    -- PART C: Records that changed (This row will be the NEW active version)
+    -- We set merge_key to NULL so it fails the 'MATCHED' clause and triggers 'INSERT'
+    SELECT
+        CAST(NULL AS VARCHAR) AS merge_key,
+        src.code,
+        src.description,
+        'UPDATE_INSERT' as action
+    FROM iceberg.${your_dbname}.airlines_stage src
+    JOIN iceberg.${your_dbname}.scd_airlines tgt
+        ON src.code = tgt.code
+    WHERE src.description <> tgt.description
+      AND tgt.valid_to > current_timestamp
+
+    UNION ALL
+
+    -- PART D: Records deleted in source (Expire them in Target)
+    SELECT
+        tgt.code AS merge_key,
+        tgt.code,
+        tgt.description,
+        'DELETE_EXPIRE' as action
+    FROM iceberg.${your_dbname}.scd_airlines tgt
+    LEFT JOIN iceberg.${your_dbname}.airlines_stage src
+        ON tgt.code = src.code
+    WHERE src.code IS NULL
+      AND tgt.valid_to > current_timestamp
+) AS source
+ON (target.code = source.merge_key AND target.valid_to > current_timestamp)
+
+WHEN MATCHED THEN
+    UPDATE SET
+        valid_to = current_timestamp,
+        updated_at = current_timestamp
+
+WHEN NOT MATCHED THEN
+    INSERT (code, description, updated_at, valid_from, valid_to)
+    VALUES (
+        source.code,
+        source.description,
+        current_timestamp,
+        current_timestamp,
+        TIMESTAMP '9999-12-31 23:59:59'
+    );
 ```
+
+Expected outcome
+|rows|
+| :- |
+| 4 |
+
 
 View the changed records and see that the VALID_FROM and VALID_TO dates are set
 
 ```sql
-select
-  code,
-  description,
-  valid_from,
-  valid_to
-from
-  airlines_scd
- where code in ('02Q','04Q','FFF')
- order by
-  code asc,
-  valid_from;
+SELECT
+    code,
+    description,
+    valid_from,
+    valid_to,
+    updated_at
+FROM
+    iceberg.${your_dbname}.scd_airlines
+WHERE code IN ('02Q', '04Q', 'FFF')
+ORDER BY code ASC, valid_from ASC;
 ```
 
 Results
