@@ -254,12 +254,8 @@ SELECT
     city,
     state,
     country,
-    -- If 'lat' contains 'USA', it means the row shifted right.
-    -- We take the value from 'lon' instead.
-    CAST(NULLIF(CASE WHEN lat = 'USA' THEN lon ELSE lat END, '') AS DOUBLE) as lat,
-    -- In shifted rows, the real longitude is pushed into an 8th column
-    -- which we can't see here, but most of your data will be fine.
-    CAST(NULLIF(CASE WHEN lat = 'USA' THEN NULL ELSE lon END, '') AS DOUBLE) as lon
+    CAST(lat AS DOUBLE) as lat,
+    CAST(lon AS DOUBLE) as lon
 FROM hive.${your_dbname}.airports_csv;
 
 -- 3. Planes Table
@@ -706,7 +702,6 @@ To remove the unused data we now expire the snapshots and remove the data pyhsic
 ** expire all snapshots that will remove all unused the data and delete files
 */
 
-SQL
 -- Removes the old, unoptimized physical files from storage
 ALTER TABLE iceberg.${your_dbname}.fct_flights
 EXECUTE expire_snapshots(retention_threshold => '0d');
