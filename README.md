@@ -960,94 +960,44 @@ This comparison perfectly illustrates the performance benefits of Iceberg Partit
 
 This example shows that the execution time is greatly decreased because less data was read.
 
-## Lab 7 - Materialized View
 
-Materialized views (MV) cause Trino to transparently rewrite queries, when possible, to use the MV instead of the base tables.
+## Lab - Federated Query
 
-Create Materialized View of a join of two tables with aggregation.
 
-```sql
--- 1. DROP MV if exists
-DROP MATERIALIZED VIEW IF EXISTS iceberg.${your_dbname}.mv_traffic_cancel_airlines;
-
--- 2. Create the Materialized View in the Iceberg catalog
-CREATE MATERIALIZED VIEW iceberg.${your_dbname}.mv_traffic_cancel_airlines
-AS SELECT
-    airlines.code AS code,  
-    airlines.description AS airline_name,
-    flights.month AS month,
-    COUNT(*) as flights_count,
-    SUM(flights.cancelled) AS cancelled,
-    -- Using COALESCE instead of NVL
-    SUM(COALESCE(depdelay, 0)) AS departure_delay_minutes,
-    -- Standardizing the CASE/SUM logic
-    SUM(CASE WHEN COALESCE(depdelay, 0) > 0 THEN 1 ELSE 0 END) as departure_delay_count
-FROM
-    iceberg.${your_dbname}.fct_flights flights
-JOIN
-    iceberg.${your_dbname}.dim_airlines airlines
-    ON flights.uniquecarrier = airlines.code
-GROUP BY
-    airlines.code,
-    airlines.description,
-    flights.month;
-```
-Note: The time to create the MV takes apporox. 3-5 minutes.
-
-Checking that the materialized view is created.
 
 ```sql
--- work in progress: SHOW MATERIALIZED VIEWS
--- workaround
+select * from  postgresdb.airlinedata.customer_complaints Limit 3;
+ ```
+
+Expected outcome
+
+
+
+ ```sql
 SELECT
-    table_catalog,
-    table_schema,
-    table_name
-FROM iceberg.information_schema.tables
-WHERE table_schema = '${your_dbname}'
-AND upper(table_name) like 'MV%';
-```
-Expected Output
-
-|table_catalog | schedule_name | table_name |
-| :- | :- | :- |
-| iceberg | db_user001 | traffic_cancel_airlines|
-
-Running a query for part of the materialized view.
-
-```sql
-SELECT
-  airlines.description AS description,
-  SUM(flights.cancelled) AS flights_cancelled
+    f.uniquecarrier,
+    p.model AS aircraft_model,
+    COUNT(c.complaint_id) AS total_complaints,
+    ROUND(AVG(CAST(c.severity_score AS DOUBLE)), 2) AS avg_severity
 FROM
-  iceberg.${your_dbname}.fct_flights flights
+    iceberg.${your_dbname}.fct_flights f
 JOIN
-  iceberg.${your_dbname}.dim_airlines airlines
-  ON flights.uniquecarrier = airlines.code
-GROUP BY
-  airlines.description;
-```  
-
-Explain if query is optimzed .
-
-```sql
-
-EXPLAIN ANALYZE
-SELECT
-  airlines.description AS description,
-  SUM(flights.cancelled) AS flights_cancelled
-FROM
-  iceberg.${your_dbname}.fct_flights flights
+    postgresdb.airlinedata.customer_complaints c
+    ON f.uniquecarrier = c.uniquecarrier
+    AND CAST(f.flightnum AS VARCHAR) = CAST(c.flightnum AS VARCHAR)
+    -- FIX for line 106: Cast extracted date parts to VARCHAR
+    AND f.year = CAST(EXTRACT(year FROM c.complaint_date) AS integer)
+    AND f.month = CAST(EXTRACT(month FROM c.complaint_date) AS integer)
+    AND f.dayofmonth = CAST(EXTRACT(day FROM c.complaint_date) AS integer)
 JOIN
-  iceberg.${your_dbname}.dim_airlines airlines
-  ON flights.uniquecarrier = airlines.code
+    iceberg.${your_dbname}.dim_planes p
+    ON f.tailnum = p.tailnum
 GROUP BY
-  airlines.description;
-```
-Output:
-```
-----
-```
+    f.uniquecarrier, p.model
+ORDER BY
+    total_complaints DESC;
+ ```
+
 
 ----
 ## Lab 8 - Slowly Changing Dimensions (SCD) - TYPE 2
@@ -1564,6 +1514,97 @@ Select correct field names for longitude and latitude and the output should look
 
 ![](images/geospatial-result-map.png)
 
+
+## Lab  -  Materialized View - WORK IN PROGRESS
+
+Query Rewrite Roadmap
+
+Materialized views (MV) cause Trino to transparently rewrite queries, when possible, to use the MV instead of the base tables.
+
+Create Materialized View of a join of two tables with aggregation.
+
+```sql
+-- 1. DROP MV if exists
+DROP MATERIALIZED VIEW IF EXISTS iceberg.${your_dbname}.mv_traffic_cancel_airlines;
+
+-- 2. Create the Materialized View in the Iceberg catalog
+CREATE MATERIALIZED VIEW iceberg.${your_dbname}.mv_traffic_cancel_airlines
+AS SELECT
+airlines.code AS code,  
+airlines.description AS airline_name,
+flights.month AS month,
+COUNT(*) as flights_count,
+SUM(flights.cancelled) AS cancelled,
+-- Using COALESCE instead of NVL
+SUM(COALESCE(depdelay, 0)) AS departure_delay_minutes,
+-- Standardizing the CASE/SUM logic
+SUM(CASE WHEN COALESCE(depdelay, 0) > 0 THEN 1 ELSE 0 END) as departure_delay_count
+FROM
+iceberg.${your_dbname}.fct_flights flights
+JOIN
+iceberg.${your_dbname}.dim_airlines airlines
+ON flights.uniquecarrier = airlines.code
+GROUP BY
+airlines.code,
+airlines.description,
+flights.month;
+```
+Note: The time to create the MV takes apporox. 3-5 minutes.
+
+Checking that the materialized view is created.
+
+```sql
+-- work in progress: SHOW MATERIALIZED VIEWS
+-- workaround
+SELECT
+table_catalog,
+table_schema,
+table_name
+FROM iceberg.information_schema.tables
+WHERE table_schema = '${your_dbname}'
+AND upper(table_name) like 'MV%';
+```
+Expected Output
+
+|table_catalog | schedule_name | table_name |
+| :- | :- | :- |
+| iceberg | db_user001 | traffic_cancel_airlines|
+
+Running a query for part of the materialized view.
+
+```sql
+SELECT
+airlines.description AS description,
+SUM(flights.cancelled) AS flights_cancelled
+FROM
+iceberg.${your_dbname}.fct_flights flights
+JOIN
+iceberg.${your_dbname}.dim_airlines airlines
+ON flights.uniquecarrier = airlines.code
+GROUP BY
+airlines.description;
+```  
+
+Explain if query is optimzed .
+
+```sql
+
+EXPLAIN ANALYZE
+SELECT
+airlines.description AS description,
+SUM(flights.cancelled) AS flights_cancelled
+FROM
+iceberg.${your_dbname}.fct_flights flights
+JOIN
+iceberg.${your_dbname}.dim_airlines airlines
+ON flights.uniquecarrier = airlines.code
+GROUP BY
+airlines.description;
+```
+Output:
+```
+----
+```
 
 ##  - Continues Data Pipeline (not setup be default)
 
