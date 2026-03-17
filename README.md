@@ -460,7 +460,7 @@ WHERE rank_id = 1
 ORDER BY marathon_miles DESC;
 ```
 
-Output:
+Expected Output:
 
 | airline_name |	route	| marathon_miles |	duration_minutes |
 | :- | :- | :- | :- |
@@ -471,8 +471,55 @@ Output:
 | Southwest Airlines Co. |	OAK to PHL |	2510 | 292 |
 
 
+### Geospatial Query - optional
 
-### Surrogate_key
+Trino's geospatial functions convert raw latitude and longitude data into a relational graph of physical proximity, enabling distance calculations and point-in-polygon joins across federated data sources.
+
+This query identifies all airports within a 50-kilometer radius of San Francisco International Airport (SFO) by dynamically retrieving SFO's coordinates and calculating the spherical distance to every other airport in the table using a geospatial join.
+
+```sql
+WITH reference_point AS (
+    -- Get the base coordinates for SFO
+    SELECT
+        lat AS ref_lat,
+        lon AS ref_lon
+    FROM iceberg.${your_dbname}.dim_airports
+    WHERE iata = 'SFO'
+)
+SELECT
+    a.iata,
+    a.airport,
+    a.city,
+    -- Calculate distance using built-in Great Circle function
+    ROUND(great_circle_distance(a.lat, a.lon, r.ref_lat, r.ref_lon), 2) AS distance_km
+FROM
+    iceberg.${your_dbname}.dim_airports a
+CROSS JOIN
+    reference_point r
+WHERE
+    -- Filter within 50km radius
+    great_circle_distance(a.lat, a.lon, r.ref_lat, r.ref_lon) <= 50
+    AND a.iata != 'SFO' -- Exclude the origin point
+ORDER BY
+    distance_km ASC;
+```
+
+Expect output
+
+
+| iata	| airport	| city	|	distance_km
+| :- | :- | :- |:- |
+|HAF |	Half Moon Bay	|Half Moon Bay	|	16.14 |
+|SQL |	San Carlos |	San Carlos		| 16.25 |
+|OAK | Metropolitan Oakland | International	Oakland	|	17.7 |
+|HWD |	Hayward Executive |	Hayward		| 22.67 |
+|PAO |	Palo Alto Arpt of Santa Clara Co |	Palo Alto	|	28.86 |
+|SJC |	San Jose International |	San Jose	|	48.63 |
+|LVK | Livermore Municipal	| Livermore	|	49.51 |
+|CCR |	Buchanan	| Concord	|	49.79 |
+
+
+### Surrogate Key - optional
 
 Trino can use UUID as surrogate keys easy & distributable & fast, but not in sequence and has gaps.
 
@@ -512,7 +559,7 @@ Result:
 
 Note: the first column is the new unique SURROGATE_KEY
 
-### Optional Step - Create a SEQUENCE
+### Create a SEQUENCE - optional
 
 ```sql
 -- 1. Create the target table structure
