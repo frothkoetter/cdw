@@ -1239,7 +1239,9 @@ Results
 
 ## Lab 9 - Data Governance and Security
 
-Dynamic Policy Enforcement operates by pushing security rules directly to lightweight agents or plugins that live within the data engine itself, such as a database or storage layer. This architecture ensures zero-latency authorization because the access check happens locally at the point of request, bypassing the need for a slow, centralized bottleneck.
+Lets explore a important component of the data security that the dynamic policy enforcement that operates by pushing security rules directly to lightweight plugins within the Trino. This architecture ensures zero-latency authorization because the access check happens locally at the point of request.
+
+This is the 
 
 ![](images/rangerpolicy.png)
 
