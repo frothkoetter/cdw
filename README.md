@@ -1241,11 +1241,14 @@ Results
 
 Lets explore a important component of the data security that the dynamic policy enforcement that operates by pushing security rules directly to lightweight plugins within the Trino. This architecture ensures zero-latency authorization because the access check happens locally at the point of request.
 
-This is the 
+
+
+In this example we defined a dynamic masking policy on the ***customer_email*** to redact the field.
+
 
 ![](images/rangerpolicy.png)
 
-In this example we defined a dynamic masking policy on the ***customer_email*** to redact the field.
+Query the data
 
 ```sql
 select
