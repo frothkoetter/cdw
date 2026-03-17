@@ -1078,9 +1078,9 @@ Create the Hive managed table for airlines. Load initial by copy 1000 rows of cu
 
 ```sql
 -- Drop and recreate the target Iceberg table
-DROP TABLE IF EXISTS iceberg.${your_dbname}.scd_airlines;
+DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_scd_airlines;
 
-CREATE TABLE iceberg.${your_dbname}.scd_airlines (
+CREATE TABLE iceberg.${your_dbname}.dim_scd_airlines (
     code VARCHAR,
     description VARCHAR,
     updated_at TIMESTAMP(6),
@@ -1090,7 +1090,7 @@ CREATE TABLE iceberg.${your_dbname}.scd_airlines (
 WITH (format = 'PARQUET');
 
 -- Initial load from Hive to Iceberg
-INSERT INTO iceberg.${your_dbname}.scd_airlines
+INSERT INTO iceberg.${your_dbname}.dim_scd_airlines
 SELECT
     code,
     description,
@@ -1224,10 +1224,10 @@ Results
 
 |CODE|DESCRIPTION|VALID\_FROM|VALID\_TO|
 | :- | :- | :- | :- |
-|02Q	|Titan Airways	|2021-01-01 00:00:00	|2024-04-11 12:06:15.649675|
+|02Q	|Titan Airways	|2021-01-01 00:00:00	|2026-03-11 12:06:15.649675|
 |02Q	|Update - TITAN AIRWAYS	|2024-04-11 12:06:15.649675	|9999-01-01 00:00:00|
-|04Q	|Tradewind Aviation	|2021-01-01 00:00:00	|2024-04-11 12:06:15.649675|
-|FFF	|New Airline	|2024-04-11 12:06:15.649675	|9999-01-01 00:00:00|
+|04Q	|Tradewind Aviation	|2021-01-01 00:00:00	|2026-03-11 12:06:15.649675|
+|FFF	|New Airline	|2026-03-11 12:06:15.649675	|9999-01-01 00:00:00|
 |-----
 
 -----
