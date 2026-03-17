@@ -1236,7 +1236,39 @@ Results
 |-----
 
 -----
-## Lab 9 - Data Visualization
+
+## Lab 9 - Data Governance and Security
+
+Dynamic Policy Enforcement operates by pushing security rules directly to lightweight agents or plugins that live within the data engine itself, such as a database or storage layer. This architecture ensures zero-latency authorization because the access check happens locally at the point of request, bypassing the need for a slow, centralized bottleneck.
+
+![](images/rangerpolicy.png)
+
+In this example we defined a dynamic masking policy on the ***customer_email*** to redact the field.
+
+```sql
+select
+  complaint_date,
+  customer_email,
+  complaint_category,
+  severity_score
+from
+  airlinedatapostgres.airlinedata.customer_complaints
+limit 3;
+```
+
+results
+
+|complaint_date |	customer_email|	complaint_category|	severity_score|
+| :- | :- | :- | :- |
+|2001-06-20 20:42:00.000|	x.xxxxxx000@xxxxx.xxx	|DOT Refund Eligible Delay |	4 |
+|2001-06-22 00:00:00.000|	xxxx.xxxx000@xxxxxxx.xxx	|Involuntary Cancellation	| 5 |
+|2001-06-23 18:48:00.000|	xxxxx_x000@xxxxxx.xxx	|DOT Refund Eligible Delay |	4 |
+
+The enforcement engine intercepted the request and alters the data depending on the Ranger policy.
+
+
+
+## Lab 10 - Data Visualization
 
 
 1. Use Data Visualization to further explore the data set.
