@@ -1024,7 +1024,12 @@ Expected outcome
 |258|	2001-06-23 18:48:00.000	|sarah_j258@icloud.com|	DOT Refund Eligible Delay	|Sitting on the tarmac for hours. This violates the 3-hour domestic rule.	|DL	|744|	205|	4|
 
 
-Lets create a federated query with dataset from PostgreSQL and Iceberg. Purpose of this query is to  identify service trends by carrier and aircraft model. By performing complex cross-catalog joins and data type conversions, it allows for a unified analysis of customer sentiment against physical assets without the need for data movement or pre-processing.
+Lets create a federated query with dataset from PostgreSQL and Iceberg.
+
+![](images/fq-overview001.png)
+
+
+Purpose of this query is to  identify service trends by carrier and aircraft model. By performing complex cross-catalog joins and data type conversions, it allows for a unified analysis of customer sentiment against physical assets without the need for data movement or pre-processing.
 
  ```sql
 SELECT
