@@ -506,7 +506,6 @@ ORDER BY
 
 Expect output
 
-
 | iata	| airport	| city	|	distance_km
 | :- | :- | :- |:- |
 |HAF |	Half Moon Bay	|Half Moon Bay	|	16.14 |
@@ -932,7 +931,6 @@ Result: Only data from the first insert Year: 1995 Months 1-6
 |1995	| 5	| 448341 |
 |1995	| 6	| 439423 |
 
-
 Partition Evolution is a feature when table layout can be updated as data or queries change and  users are not required to maintain partition columns.
 
 ![](images/IcebergPartitionEvo.png)
@@ -1008,17 +1006,25 @@ This comparison perfectly illustrates the performance benefits of Iceberg Partit
 This example shows that the execution time is greatly decreased because less data was read.
 
 
-## Lab - Federated Query
+## Lab 7 - Federated Query
 
+Trino’s federated query capability serves as a modern architectural feature by allowing users to execute a single SQL statement across multiple, diverse data sources like PostgreSQL, Iceberg, and Hive or Impala without moving the data. This "query-in-place" approach eliminates the need for time-consuming ETL processes, enabling real-time insights by joining live operational data with massive historical datasets stored in a data lake.
 
-
+Quick check query a table in PostgreSQL
 ```sql
 select * from  postgresdb.airlinedata.customer_complaints Limit 3;
  ```
 
 Expected outcome
 
+|complaint_id|	complaint_date|	customer_email	|complaint_category	|complaint_text	|uniquecarrier|	flightnum|	delay_minutes	|severity_score|
+| :- | :- | :- | :- | :- | :- | :- | :- | :- |
+|256|	2001-06-20 20:42:00.000	|m.garcia256@gmail.com|	DOT Refund Eligible| Delay	Sitting on the tarmac for hours. This violates the 3-hour domestic rule.	|DL	|744|	227	|4|
+|257|	2001-06-22 00:00:00.000	|alex.chen257@outlook.com|	Involuntary Cancellation|	Flight 744 was cancelled. I am stuck at ATL and the rebooking app is crashing.|DL|	744	|NULL	|5|
+|258|	2001-06-23 18:48:00.000	|sarah_j258@icloud.com|	DOT Refund Eligible Delay	|Sitting on the tarmac for hours. This violates the 3-hour domestic rule.	|DL	|744|	205|	4|
 
+
+Lets create a federated query with dataset from PostgreSQL and Iceberg. Purpose of this query is to  identify service trends by carrier and aircraft model. By performing complex cross-catalog joins and data type conversions, it allows for a unified analysis of customer sentiment against physical assets without the need for data movement or pre-processing.
 
  ```sql
 SELECT
@@ -1042,22 +1048,31 @@ JOIN
 GROUP BY
     f.uniquecarrier, p.model
 ORDER BY
-    total_complaints DESC;
+    total_complaints DESC
+LIMIT 3;
  ```
 
+Expected outcome
+
+ |uniquecarrier	|aircraft_model	|total_complaints	|avg_severity|
+ | :- | :- | :- | :- |
+ |DL |	MD-88	|2278	|3.3|
+ |AA	|DC-9-82(MD-82)|	1696	|2.71|
+ |DL|	757-232	|1402	|3.1|
+
+
+ This lab demonstrates that Trino’s query federation effectively collapses data silos by enabling real-time joins between operational PostgreSQL feedback and historical Iceberg flight archives. By eliminating the need for data movement, you’ve established a high-performance architecture that delivers immediate visibility into how specific aircraft models impact the overall customer experience.
 
 ----
 ## Lab 8 - Slowly Changing Dimensions (SCD) - TYPE 2
 
-*Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
-
-This lab demonstrates a comprehensive merge operation using ACID tables in Hive, including the ability to update, insert, and delete rows within a single transaction.
+This lab demonstrates a comprehensive merge operation using ACID tables in Iceberg, including the ability to update, insert, and delete rows within a single transaction.
 
 A Type 2 SCD retains the full history of values. When the value of a chosen attribute changes, the current record is closed. A new record is created with the changed data values and this new record becomes the current record.
 
 ![](images/cdw-lab7-001.png)
 
-We create a new SDC table ***airline\_scd*** and add columns ***valid\_from*** and ***valid\_to***. Then loading the initial into this SDC table, then mock up new data and change data in the table ***airlines\_stage***.
+We create a new SDC table ***scd\_airline*** and add columns ***valid\_from*** and ***valid\_to***. Then loading the initial into this SDC table, then mock up new data and change data in the table ***airlines\_stage***.
 
 Create the Hive managed table for airlines. Load initial by copy 1000 rows of current airlines with hard code the valid_from date
 
@@ -1088,52 +1103,51 @@ FROM hive.${your_dbname}.airlines_csv;
 Create an external staging table pointing to our complete airlines dataset (1491 records), add one row, update a description and delete two rows to mockup a change in the dimension
 
 ```sql
-DROP TABLE IF EXISTS iceberg.${your_dbname}.airlines_stage;
+DROP TABLE IF EXISTS iceberg.${your_dbname}.stg_airlines;
 
--- Create stage with current data
-CREATE TABLE iceberg.${your_dbname}.airlines_stage AS
+-- Create staging table with current data
+CREATE TABLE iceberg.${your_dbname}.stg_airlines AS
 SELECT code, description FROM hive.${your_dbname}.airlines_csv;
 
--- 1. Insert one row
-INSERT INTO iceberg.${your_dbname}.airlines_stage (code, description)
+-- 1. Insert one row (New record)
+INSERT INTO iceberg.${your_dbname}.stg_airlines (code, description)
 VALUES ('FFF', 'New Airline');
 
--- 2. Update a description
-UPDATE iceberg.${your_dbname}.airlines_stage
+-- 2. Update a description (Modified record)
+UPDATE iceberg.${your_dbname}.stg_airlines
 SET description = concat('Update - ', upper(description))
 WHERE code = '02Q';
 
--- 3. Delete a row
-DELETE FROM iceberg.${your_dbname}.airlines_stage
+-- 3. Delete a row (Removed record in source)
+DELETE FROM iceberg.${your_dbname}.stg_airlines
 WHERE code = '04Q';
 ```
 
-Finally merging these two tables with a single MERGE command to maintain the historical data and check the results.
+We now execute a single MERGE statement. This logic is sophisticated: it identifies records to expire (setting valid_to to the current time) and records to insert as the new "active" version.
 
 ```sql
 MERGE INTO iceberg.${your_dbname}.scd_airlines AS target
 USING (
-    -- PART A: New records that don't exist at all
+    -- PART A: New records that don't exist in target
     SELECT
         src.code AS merge_key,
         src.code,
         src.description,
         'INSERT' as action
-    FROM iceberg.${your_dbname}.airlines_stage src
+    FROM iceberg.${your_dbname}.stg_airlines src
     LEFT JOIN iceberg.${your_dbname}.scd_airlines tgt
         ON src.code = tgt.code
     WHERE tgt.code IS NULL
 
     UNION ALL
 
-    -- PART B: Records that changed (This row will EXPIRE the old record)
-    -- We join on code and only take the currently active record
+    -- PART B: Records that changed (This branch EXPIRES the old record)
     SELECT
         src.code AS merge_key,
         src.code,
         src.description,
         'UPDATE_EXPIRE' as action
-    FROM iceberg.${your_dbname}.airlines_stage src
+    FROM iceberg.${your_dbname}.stg_airlines src
     JOIN iceberg.${your_dbname}.scd_airlines tgt
         ON src.code = tgt.code
     WHERE src.description <> tgt.description
@@ -1141,14 +1155,13 @@ USING (
 
     UNION ALL
 
-    -- PART C: Records that changed (This row will be the NEW active version)
-    -- We set merge_key to NULL so it fails the 'MATCHED' clause and triggers 'INSERT'
+    -- PART C: Records that changed (This branch INSERTS the new active version)
     SELECT
         CAST(NULL AS VARCHAR) AS merge_key,
         src.code,
         src.description,
         'UPDATE_INSERT' as action
-    FROM iceberg.${your_dbname}.airlines_stage src
+    FROM iceberg.${your_dbname}.stg_airlines src
     JOIN iceberg.${your_dbname}.scd_airlines tgt
         ON src.code = tgt.code
     WHERE src.description <> tgt.description
@@ -1163,7 +1176,7 @@ USING (
         tgt.description,
         'DELETE_EXPIRE' as action
     FROM iceberg.${your_dbname}.scd_airlines tgt
-    LEFT JOIN iceberg.${your_dbname}.airlines_stage src
+    LEFT JOIN iceberg.${your_dbname}.stg_airlines src
         ON tgt.code = src.code
     WHERE src.code IS NULL
       AND tgt.valid_to > current_timestamp
