@@ -7,12 +7,12 @@ Analyze Stored Data with Trino and Iceberg
 ## Introduction
 This workshop gives you an overview of how to use the Cloudera Data Warehouse service to quickly explore raw data, create curated versions of the data for reporting and dashboarding, and then scale up usage of the curated data by exposing it to more users. It highlights the performance and automation capabilities that help ensure performance is maintained while controlling cost.  
 
-Enitiy-Relation Diagram of tables we use in todays workshop:
+Star Schema Diagram of tables we use in todays workshop:
 - fact table: flights (86mio rows)
 - dimension tables: airlines (1.5k rows), airports (3.3k rows) and planes (5k rows)
 - federation table: customer_complains (50k rows)
 
-![](images/image001.png)
+![](images/starschema001.png)
 
 -----
 ## Lab 1 - Create Schema
