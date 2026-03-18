@@ -1271,6 +1271,25 @@ results
 
 The enforcement engine intercepted the request and alters the data depending on the Ranger policy.
 
+### Data Redaction - Targeted Queries Return Zero Results - Optinal
+
+When a Redaction policy is active, the engine evaluates the WHERE clause against the transformed value (e.g., x.xxxxxx000@xxxxx.xxx), causing a mismatch with the original clear-text string.
+
+```sql
+select
+  complaint_date,
+  customer_email,
+  complaint_category,
+  severity_score
+from
+  airlinedatapostgres.airlinedata.customer_complaints
+where
+  customer_email = 'm.garcia256@gmail.com'
+```
+
+ Done. 0 results.
+
+ This ensures that even if an unauthorized user knows a specific email address, Cloudera SDX prevents them from confirming its existence or accessing the record.
 
 
 ## Lab 10 - Data Visualization
