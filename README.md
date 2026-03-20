@@ -1026,7 +1026,7 @@ Expected outcome
 
 Lets create a federated query with dataset from PostgreSQL and Iceberg.
 
-![](images/fq-overview001.png)
+![](images/fq-sample001.png)
 
 
 Purpose of this query is to  identify service trends by carrier and aircraft model. By performing complex cross-catalog joins and data type conversions, it allows for a unified analysis of customer sentiment against physical assets without the need for data movement or pre-processing.
