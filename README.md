@@ -1294,7 +1294,11 @@ where
 
 ## Lab 10 - Data Visualization
 
+You can explore this dashboard
+
 ![](images/dataviz-010.png)
+
+or create a new dashboard by the following steps:
 
 1. Use Data Visualization to further explore the data set.
 
