@@ -1294,6 +1294,7 @@ where
 
 ## Lab 10 - Data Visualization
 
+![](images/dataviz-010.png)
 
 1. Use Data Visualization to further explore the data set.
 
