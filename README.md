@@ -1012,7 +1012,7 @@ Trino’s federated query capability serves as a modern architectural feature by
 
 Quick check query a table in PostgreSQL
 ```sql
-select * from  postgresdb.airlinedata.customer_complaints Limit 3;
+select * from  postgres.airlinedata.customer_complaints Limit 3;
  ```
 
 Expected outcome
@@ -1040,7 +1040,7 @@ SELECT
 FROM
     iceberg.${your_dbname}.fct_flights f
 JOIN
-    postgresdb.airlinedata.customer_complaints c
+    postgres.airlinedata.customer_complaints c
     ON f.uniquecarrier = c.uniquecarrier
     AND CAST(f.flightnum AS VARCHAR) = CAST(c.flightnum AS VARCHAR)
     -- FIX for line 106: Cast extracted date parts to VARCHAR
