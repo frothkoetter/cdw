@@ -1282,7 +1282,7 @@ select
   complaint_category,
   severity_score
 from
-  airlinedatapostgres.airlinedata.customer_complaints
+  postgres.airlinedata.customer_complaints
 where
   customer_email = 'm.garcia256@gmail.com'
 ```
@@ -1294,13 +1294,44 @@ where
 
 ## Lab 10 - Data Visualization
 
-You can explore this dashboard
+You can explore this dashboard -
 
 ![](images/dataviz-010.png)
 
 or create a new dashboard by the following steps:
 
-1. Use Data Visualization to further explore the data set.
+Navigate to DataVisualizaton and click on NEW DATASET
+
+Enter:
+
+Dataset Title: ```Top Grumpy Routes```
+Dataset Source:  ```SQL```
+Enter SQL below: ```sql
+SELECT
+    o.city || ' to ' || d.city AS route,
+    o.city as origion,
+    d.city as destination,
+    f.uniquecarrier ,
+    COUNT(c.complaint_id) AS complaint_volume  
+FROM postgres.airlinedata.customer_complaints c
+JOIN iceberg.db_user001.fct_flights f ON c.uniquecarrier = f.uniquecarrier AND c.flightnum = cast ( f.flightnum as varchar)
+JOIN iceberg.db_user001.dim_airports o ON f.origin = o.iata
+JOIN iceberg.db_user001.dim_airports d ON f.dest = d.iata
+GROUP BY 1,2,3,4
+ORDER BY 2 DESC
+```
+
+Click on Show Data
+Click on CREATE
+
+This Dataset shows and click on New Dashboard
+
+![](images/dataviz-012.png)
+
+
+
+
+![](images/dataviz-011.png)
 
 `	`Open DataViz
 
