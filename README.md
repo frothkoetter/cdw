@@ -448,11 +448,11 @@ Expected Output:
 
 | airline_name |	route	| marathon_miles |	duration_minutes |
 | :- | :- | :- | :- |
-| Delta Air Lines Inc.	| ATL to HNL |	4502 |	564 |
-| United Air Lines Inc. |	ORD to HNL |	4243	| 533 |
-| American Airlines Inc. |	ORD to HNL |	4243 |	505 |
-| US Airways Inc. (Merged with America West 9/05. Reporting for both starting 10/07.)	| LIH to PHX |	2979	| 344 |
-| Southwest Airlines Co. |	OAK to PHL |	2510 | 292 |
+| Delta Air Lines Inc.	| ATL to HNL |	4502 |	541 |
+| United Air Lines Inc. |	ORD to HNL |	4243	| 506 |
+| American Airlines Inc. |	ORD to HNL |	4243 |	462 |
+| US Airways Inc. (Merged with America West 9/05. Reporting for both starting 10/07.)	| LIH to PHX |	2979	| 313 |
+| Southwest Airlines Co. |	OAK to PHL |	2510 | 284 |
 
 
 ### Geospatial Query - optional
@@ -561,7 +561,7 @@ SELECT
     code,
     description
 FROM
-    iceberg.${your_dbname}.airlines_csv;
+    hive.${your_dbname}.airlines_csv;
 
 -- 3. Verify
 SELECT * FROM iceberg.${your_dbname}.airlines_with_seq ORDER BY id LIMIT 3;
