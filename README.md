@@ -207,23 +207,7 @@ Results
 |N366UA	| 24808 |331318	| 12113	|
 |N377UA	| 25105 |328546	| 12163	|
 
-### SQL AI Assistant - makes SQL development faster, easier, and less error-prone
 
-The SQL AI Assistant is an AI-powered tool designed to enhance SQL development, making it faster, more intuitive, and less prone to errors. By leveraging advanced contextual understanding of your data, it provides accurate and relevant SQL code suggestions that improve productivity. Integrated into Hue within Cloudera, this assistant harnesses the capabilities of Large Language Models (LLMs) for a range of SQL tasks, including query creation, editing, optimization, debugging, and summarization.
-
-Click on the blue dot to launch the SQL AI Assistant
-
-![](images/cdw-lab1-ai001.png)
-
-this unfolds this bar and click on EXPLAIN
-
-![](images/cdw-lab1-ai002.png)
-
-The SQL AI Assistant will take a few seconds to generate a outcome.
-
-![](images/cdw-lab1-ai004.png)
-
-This can be inserted for documentation purposes.
 
 -----
 ## Lab 3 - Iceberg Tables
@@ -337,7 +321,7 @@ The shows detailed information about the table.
  ```sql
 DESCRIBE iceberg.${your_dbname}.fct_flights ;
  ```
-Result: column names with types, parameters and storage
+Result: column names with types
 
 |col_name| data_type| comment|
 | :- | :- |:- |
@@ -346,7 +330,7 @@ Result: column names with types, parameters and storage
 |dayofweek| int| |
 ...
 
-Show column statistics
+Show column statistics of the created iceberg table.
 
  ```sql
 SHOW STATS FOR iceberg.${your_dbname}.fct_flights;
@@ -363,6 +347,10 @@ Result: column data statistics
 |5|deptime|NULL|1619|0.0218189|NULL|1|2318|
 |6|crsdeptime|NULL|1293|0|NULL|1|1927|
 ...
+
+You see statistics immediately after aCTAS) in Trino's Iceberg connector is due to a specific feature called "Collect on Write."
+
+Looking deeper into the partioning as in Apache Iceberg, partitions are tracked in Manifest Files. Trino isn't touching your data files at all; it is performing a high-speed metadata-only read.
 
  ```sql
  SELECT partition, record_count, file_count, total_size   
@@ -387,6 +375,35 @@ Result: showing all 14 partitions with keys (years)
 |[2006] | 7141922 |9      | 113833004|
 |[2007] | 7453215 |8      | 118620089|
 |[2008] | 7009728 |8      | 114092417|
+
+
+Lets look deeper into partitions of the "fct_flights" table:
+
+ ```sql
+ SELECT partition, record_count, file_count, total_size   
+ FROM iceberg.${your_dbname}."fct_flights$partitions"
+ ORDER BY partition;
+ ```
+Result: showing all 14 partitions with keys (years)
+
+|partition |      record_count|    file_count   |   total_size|
+| :- |:- |:- |:- |
+|[1995] | 5327435 |7      | 57774143|
+|[1996] | 5351983 |7      | 58347109|
+|[1997] | 5411843 |7      | 59631458|
+|[1998] | 5384721 |6      | 59213838|
+|[1999] | 5527884 |7      | 61922778|
+|[2000] | 5683047 |7      | 64065106|
+|[2001] | 5967780 |8      | 67177068|
+|[2002] | 5271359 |7      | 62869905|
+|[2003] | 6488540 |8      | 88406053|
+|[2004] | 7129270 |9      | 110097503|
+|[2005] | 7140596 |9      | 109736198|
+|[2006] | 7141922 |9      | 113833004|
+|[2007] | 7453215 |8      | 118620089|
+|[2008] | 7009728 |8      | 114092417|
+
+Uniform File Distribution: You have roughly 6 to 9 files per partition for ~5M to 7M rows. This is a very "healthy" distribution. These files are relatively small (under 100MB), Trino's can pull these files into memory, decompress the columns, and process them in parallel across your worker nodes effortlessly.
 
 
 Experiment with different queries to see effects of the columnar storage format and cache.
@@ -1057,7 +1074,7 @@ ORDER BY
 LIMIT 3;
  ```
 
-Expected outcome
+Expected outcome (may vary)
 
  |uniquecarrier	|aircraft_model	|total_complaints	|avg_severity|
  | :- | :- | :- | :- |
@@ -1359,6 +1376,25 @@ This Dataset shows and click on New Dashboard
 
 
 # Bonus Material (optional)
+
+### SQL AI Assistant - makes SQL development faster, easier, and less error-prone
+
+The SQL AI Assistant is an AI-powered tool designed to enhance SQL development, making it faster, more intuitive, and less prone to errors. By leveraging advanced contextual understanding of your data, it provides accurate and relevant SQL code suggestions that improve productivity. Integrated into Hue within Cloudera, this assistant harnesses the capabilities of Large Language Models (LLMs) for a range of SQL tasks, including query creation, editing, optimization, debugging, and summarization.
+
+Click on the blue dot to launch the SQL AI Assistant
+
+![](images/cdw-lab1-ai001.png)
+
+this unfolds this bar and click on EXPLAIN
+
+![](images/cdw-lab1-ai002.png)
+
+The SQL AI Assistant will take a few seconds to generate a outcome.
+
+![](images/cdw-lab1-ai004.png)
+
+This can be inserted for documentation purposes.
+
 
 ## ⚠️  Data Quality with Branching **** WORK IN PROGRESS *** ⚠️
 
