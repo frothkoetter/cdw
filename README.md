@@ -325,9 +325,10 @@ Result: column names with types
 
 |col_name| data_type| comment|
 | :- | :- |:- |
-|month| int| |
-|dayofmonth| int| |
-|dayofweek| int| |
+|year| integer | |
+|month| integer | |
+|dayofmonth| integer | |
+|dayofweek| integer | |
 ...
 
 Show column statistics of the created iceberg table.
@@ -348,34 +349,9 @@ Result: column data statistics
 |6|crsdeptime|NULL|1293|0|NULL|1|1927|
 ...
 
-You see statistics immediately after aCTAS) in Trino's Iceberg connector is due to a specific feature called "Collect on Write."
+You see statistics immediately after create table as select (CTAS) in Trino's Iceberg connector is due to a specific feature called "Collect on Write."
 
-Looking deeper into the partioning as in Apache Iceberg, partitions are tracked in Manifest Files. Trino isn't touching your data files at all; it is performing a high-speed metadata-only read.
-
- ```sql
- SELECT partition, record_count, file_count, total_size   
- FROM iceberg.${your_dbname}."fct_flights$partitions"
- ORDER BY partition;
- ```
-Result: showing all 14 partitions with keys (years)
-
-|partition |      record_count|    file_count   |   total_size|
-| :- |:- |:- |:- |
-|[1995] | 5327435 |7      | 57774143|
-|[1996] | 5351983 |7      | 58347109|
-|[1997] | 5411843 |7      | 59631458|
-|[1998] | 5384721 |6      | 59213838|
-|[1999] | 5527884 |7      | 61922778|
-|[2000] | 5683047 |7      | 64065106|
-|[2001] | 5967780 |8      | 67177068|
-|[2002] | 5271359 |7      | 62869905|
-|[2003] | 6488540 |8      | 88406053|
-|[2004] | 7129270 |9      | 110097503|
-|[2005] | 7140596 |9      | 109736198|
-|[2006] | 7141922 |9      | 113833004|
-|[2007] | 7453215 |8      | 118620089|
-|[2008] | 7009728 |8      | 114092417|
-
+Looking deeper into the partitioning as in Apache Iceberg, partitions are tracked in Manifest Files. Trino isn't touching your data files at all; it is performing a high-speed metadata-only read.
 
 Lets look deeper into partitions of the "fct_flights" table:
 
@@ -388,22 +364,13 @@ Result: showing all 14 partitions with keys (years)
 
 |partition |      record_count|    file_count   |   total_size|
 | :- |:- |:- |:- |
-|[1995] | 5327435 |7      | 57774143|
+|[1995] | 5327435 |5      | 57774143|
 |[1996] | 5351983 |7      | 58347109|
 |[1997] | 5411843 |7      | 59631458|
 |[1998] | 5384721 |6      | 59213838|
-|[1999] | 5527884 |7      | 61922778|
-|[2000] | 5683047 |7      | 64065106|
-|[2001] | 5967780 |8      | 67177068|
-|[2002] | 5271359 |7      | 62869905|
-|[2003] | 6488540 |8      | 88406053|
-|[2004] | 7129270 |9      | 110097503|
-|[2005] | 7140596 |9      | 109736198|
-|[2006] | 7141922 |9      | 113833004|
-|[2007] | 7453215 |8      | 118620089|
-|[2008] | 7009728 |8      | 114092417|
+...
 
-Uniform File Distribution: You have roughly 6 to 9 files per partition for ~5M to 7M rows. This is a very "healthy" distribution. These files are relatively small (under 100MB), Trino's can pull these files into memory, decompress the columns, and process them in parallel across your worker nodes effortlessly.
+Uniform File Distribution: You have roughly 5 to 7 files per partition for ~5M to 7M rows. This is a very "healthy" distribution. These files are relatively small (under 100MB), Trino's can pull these files into memory, decompress the columns, and process them in parallel across your worker nodes effortlessly.
 
 
 Experiment with different queries to see effects of the columnar storage format and cache.
