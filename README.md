@@ -646,7 +646,7 @@ Expected output:
 
 | snapshot_id |	committed_at | operation |	metric_name |	metric_value |
 | :- | :- | :- | :- | :- |
-| 3769149312242635307	| 2026-03-05 18:42:44.182 UTC | delete |	added-position-delete-files |	6 |
+| 3769149312242635307	| 2026-03-05 18:42:44.182 UTC | delete |	added-position-delete-files |	10 |
 | 3769149312242635307	| 2026-03-05 18:42:44.182 UTC	| delete | added-position-deletes |	45202 |
 
 What happened: Since you only targeted a few days, Trino didn't want to rewrite the large data files for that month. Instead, it created 4 Position Delete files.
@@ -710,7 +710,7 @@ Expected output:
 
 | snapshot_id	| committed_at |	operation	| metric_name	| metric_value |
 | :- | :- | :- | :- | :- |
-|1282395553745806941 |	2026-03-05 19:05:15.600 UTC |	delete |	deleted-data-files |	7 |
+|1282395553745806941 |	2026-03-05 19:05:15.600 UTC |	delete |	deleted-data-files |	6 |
 |1282395553745806941 |	2026-03-05 19:05:15.600 UTC	| delete	 | deleted-records |	5683047 |
 
 What happened: This was a "massive" cleanup. Because your table is partitioned by year, Trino realized it didn't need to write any delete files or rewrite any data. It simply unlinked the files belonging to that year.
@@ -785,6 +785,12 @@ SELECT
 FROM
   iceberg.${your_dbname}.fct_flights;
 ```
+
+Expected output:
+| rows |
+| :- |
+| 86289323 |
+
 
 ⚠️ Important Note on "DANGER"
 The rollback is "dangerous" because it makes all your recent work (the 5.7M deletions and optimizations) "invisible" to the main table. However, in Iceberg, those files aren't physically deleted immediately—they stay in storage until an expire_snapshots command is run.
