@@ -831,7 +831,7 @@ GROUP BY 1;
 ```
 | file_type	| file_count |	total_records |	size_mb |
 | :- | :- | :- | :- |
-| Data File (Clean) |	88 |	80561074 |	1037.5 |
+| Data File (Clean) |	80 |	86289323 |	1048.0 |
 
 Your table is now fully optimized with 80.5 million rows stored in 88 clean data files and zero delete debt, ensuring maximum read performance.
 
@@ -847,14 +847,13 @@ Lets create a new table with Iceberg format and insert rows in batches:
 DROP TABLE IF EXISTS iceberg.${your_dbname}.fct_flights_history_lab;
 
 -- Create a sandbox table for the year 1995
-CREATE TABLE iceberg.${your_dbname}.flights_history_lab
-WITH (format = 'PARQUET')
+CREATE TABLE iceberg.${your_dbname}.fct_flights_history_lab
 AS
 SELECT * FROM iceberg.${your_dbname}.fct_flights
 WHERE year = 1995 AND month <= 6;
 
 -- Insert a second batch of data (This creates a second snapshot)
-INSERT INTO iceberg.${your_dbname}.flights_history_lab
+INSERT INTO iceberg.${your_dbname}.fct_flights_history_lab
 SELECT * FROM iceberg.${your_dbname}.fct_flights
 WHERE year = 1995 AND month > 6;
 
@@ -868,7 +867,7 @@ Check the count of all rows inserted previouly:
 select
  count(*) row_count
 from
- iceberg.${your_dbname}.flights_history_lab;
+ iceberg.${your_dbname}.fct_flights_history_lab;
 ```
 
 Result:
@@ -921,7 +920,7 @@ Result: Only data from the first insert Year: 1995 Months 1-6
 |1995	| 5	| 448341 |
 |1995	| 6	| 439423 |
 
-Partition Evolution is a feature when table layout can be updated as data or queries change and  users are not required to maintain partition columns.
+Next is Partition Evolution: this is a feature when partition layout can be updated as data or queries change and users are not required to maintain partition columns.
 
 ![](images/IcebergPartitionEvo.png)
 
@@ -967,7 +966,7 @@ SELECT
     count(*) as row_count,
     sum(depdelay) as total_dep_delay
 FROM
-    iceberg.${your_dbname}.flights_ice
+    iceberg.${your_dbname}.fct_flights
 WHERE  
     year = 1995 AND month = 1 AND dayofmonth = 1;
 ```
