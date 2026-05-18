@@ -1032,13 +1032,14 @@ JOIN
     postgres.airlinedata.customer_complaints c
     ON f.uniquecarrier = c.uniquecarrier
     AND CAST(f.flightnum AS VARCHAR) = CAST(c.flightnum AS VARCHAR)
-    -- FIX for line 106: Cast extracted date parts to VARCHAR
     AND f.year = CAST(EXTRACT(year FROM c.complaint_date) AS integer)
     AND f.month = CAST(EXTRACT(month FROM c.complaint_date) AS integer)
     AND f.dayofmonth = CAST(EXTRACT(day FROM c.complaint_date) AS integer)
 JOIN
     iceberg.${your_dbname}.dim_planes p
     ON f.tailnum = p.tailnum
+WHERE
+    p.model <> ''
 GROUP BY
     f.uniquecarrier, p.model
 ORDER BY
@@ -1097,30 +1098,30 @@ FROM hive.${your_dbname}.airlines_csv;
 Create an external staging table pointing to our complete airlines dataset (1491 records), add one row, update a description and delete two rows to mockup a change in the dimension
 
 ```sql
-DROP TABLE IF EXISTS iceberg.${your_dbname}.stg_airlines;
+DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines_stg;
 
 -- Create staging table with current data
-CREATE TABLE iceberg.${your_dbname}.stg_airlines AS
+CREATE TABLE iceberg.${your_dbname}.dim_airlines_stg AS
 SELECT code, description FROM hive.${your_dbname}.airlines_csv;
 
 -- 1. Insert one row (New record)
-INSERT INTO iceberg.${your_dbname}.stg_airlines (code, description)
+INSERT INTO iceberg.${your_dbname}.dim_airlines_stg (code, description)
 VALUES ('FFF', 'New Airline');
 
 -- 2. Update a description (Modified record)
-UPDATE iceberg.${your_dbname}.stg_airlines
+UPDATE iceberg.${your_dbname}.dim_airlines_stg
 SET description = concat('Update - ', upper(description))
 WHERE code = '02Q';
 
 -- 3. Delete a row (Removed record in source)
-DELETE FROM iceberg.${your_dbname}.stg_airlines
+DELETE FROM iceberg.${your_dbname}.dim_airlines_stg
 WHERE code = '04Q';
 ```
 
 We now execute a single MERGE statement. This logic is sophisticated: it identifies records to expire (setting valid_to to the current time) and records to insert as the new "active" version.
 
 ```sql
-MERGE INTO iceberg.${your_dbname}.scd_airlines AS target
+MERGE INTO iceberg.${your_dbname}.dim_airlines_scd AS target
 USING (
     -- PART A: New records that don't exist in target
     SELECT
@@ -1128,8 +1129,8 @@ USING (
         src.code,
         src.description,
         'INSERT' as action
-    FROM iceberg.${your_dbname}.stg_airlines src
-    LEFT JOIN iceberg.${your_dbname}.scd_airlines tgt
+    FROM iceberg.${your_dbname}.dim_airlines_stg src
+    LEFT JOIN iceberg.${your_dbname}.dim_airlines_scd tgt
         ON src.code = tgt.code
     WHERE tgt.code IS NULL
 
@@ -1141,8 +1142,8 @@ USING (
         src.code,
         src.description,
         'UPDATE_EXPIRE' as action
-    FROM iceberg.${your_dbname}.stg_airlines src
-    JOIN iceberg.${your_dbname}.scd_airlines tgt
+    FROM iceberg.${your_dbname}.dim_airlines_stg src
+    JOIN iceberg.${your_dbname}.dim_airlines_scd tgt
         ON src.code = tgt.code
     WHERE src.description <> tgt.description
       AND tgt.valid_to > current_timestamp
@@ -1155,8 +1156,8 @@ USING (
         src.code,
         src.description,
         'UPDATE_INSERT' as action
-    FROM iceberg.${your_dbname}.stg_airlines src
-    JOIN iceberg.${your_dbname}.scd_airlines tgt
+    FROM iceberg.${your_dbname}.dim_airlines_stg src
+    JOIN iceberg.${your_dbname}.dim_airlines_scd tgt
         ON src.code = tgt.code
     WHERE src.description <> tgt.description
       AND tgt.valid_to > current_timestamp
@@ -1169,8 +1170,8 @@ USING (
         tgt.code,
         tgt.description,
         'DELETE_EXPIRE' as action
-    FROM iceberg.${your_dbname}.scd_airlines tgt
-    LEFT JOIN iceberg.${your_dbname}.stg_airlines src
+    FROM iceberg.${your_dbname}.dim_airlines_scd tgt
+    LEFT JOIN iceberg.${your_dbname}.dim_airlines_stg src
         ON tgt.code = src.code
     WHERE src.code IS NULL
       AND tgt.valid_to > current_timestamp
@@ -1209,7 +1210,7 @@ SELECT
     valid_to,
     updated_at
 FROM
-    iceberg.${your_dbname}.scd_airlines
+    iceberg.${your_dbname}.dim_airlines_scd
 WHERE code IN ('02Q', '04Q', 'FFF')
 ORDER BY code ASC, valid_from ASC;
 ```
@@ -1246,7 +1247,7 @@ select
   complaint_category,
   severity_score
 from
-  airlinedatapostgres.airlinedata.customer_complaints
+  postgres.airlinedata.customer_complaints
 limit 3;
 ```
 
