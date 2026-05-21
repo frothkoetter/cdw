@@ -973,6 +973,9 @@ FROM
 WHERE  
     year = 1995 AND month = 1 AND dayofmonth = 1;
 ```
+| Query Plan |
+| :- |
+| Trino version: CDWH-2025.0.21.0-185-tag-1-g56ea7a7-dirty Queued: 116.40us, Analysis: |
 
 ```sql
 -- Query 2: Data from the second insert (Newer evolved partition)
@@ -985,7 +988,17 @@ FROM
 WHERE  
     year = 2026 AND month = 1 AND dayofmonth = 1;
  ```
-This comparison perfectly illustrates the performance benefits of Iceberg Partition Evolution. In the second plan, the data was written after the partition spec was made more granular, while the first plan shows a query hitting data written before the evolution.
+
+Expected outcome (one very long text line):
+
+| Query Plan |
+| :- |
+| Trino version: CDWH-2025.0.21.0-185-tag-1-g56ea7a7-dirty Queued: 115.25us, Analysis: 99.37ms, Planning: 88.61ms, Execution: 332.29ms ... |
+
+
+The following compares the performance benefits of Iceberg Partition Evolution.
+
+In the second plan, the data was written after the partition spec was made more granular, while the first plan shows a query hitting data written before the evolution.
 
 | Metric | Query 2 (Year 2026) | Query 1 (Year 1995) |
 | :- | :- | :- |
