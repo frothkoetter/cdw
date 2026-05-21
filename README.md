@@ -739,7 +739,7 @@ EXECUTE expire_snapshots(retention_threshold => '0d');
 Expected outcome:
 
 
-<span style="color: red;">
+<span style="color:red">
 "TrinoUserError(type=USER_ERROR, name=INVALID_PROCEDURE_ARGUMENT, message="Retention specified (0.00d) is shorter than the minimum retention configured in the system (7.00d). Minimum retention can be changed with iceberg.expire_snapshots.min-retention configuration property or iceberg.expire_snapshots_min_retention session property", query_id=20260305_191945_00444_dffp9)"
 </span>
 
