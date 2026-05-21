@@ -1111,6 +1111,10 @@ SELECT
     CAST(TIMESTAMP '9999-12-31 23:59:59' AS TIMESTAMP(6))  -- valid_to
 FROM hive.${your_dbname}.airlines_csv;
 ```
+Expected outcome
+|rows	|
+| :- |
+| 1491 |
 
 Create an external staging table pointing to our complete airlines dataset (1491 records), add one row, update a description and delete two rows to mockup a change in the dimension
 
@@ -1134,6 +1138,10 @@ WHERE code = '02Q';
 DELETE FROM iceberg.${your_dbname}.dim_airlines_stg
 WHERE code = '04Q';
 ```
+Expected outcome
+|rows	|
+| :- |
+| 1 |
 
 We now execute a single MERGE statement. This logic is sophisticated: it identifies records to expire (setting valid_to to the current time) and records to insert as the new "active" version.
 
@@ -1338,10 +1346,21 @@ Click on CREATE
 
 This Dataset shows and click on New Dashboard
 
-![](images/dataviz-012.png)
+![](images/cdwlab10-0010.png)
 
 
+![](images/cdwlab10-0011.png)
 
+![](images/cdwlab10-0012.png)
+
+![](images/cdwlab10-0013.png)
+
+![](images/cdwlab10-0014.png)
+
+![](images/cdwlab10-0015.png)
+
+
+### Optional - Lab 10 Data Visualization - Step by Step
 
 ![](images/dataviz-011.png)
 
