@@ -738,7 +738,10 @@ EXECUTE expire_snapshots(retention_threshold => '0d');
 ```
 Expected outcome:
 
-TrinoUserError(type=USER_ERROR, name=INVALID_PROCEDURE_ARGUMENT, message="Retention specified (0.00d) is shorter than the minimum retention configured in the system (7.00d). Minimum retention can be changed with iceberg.expire_snapshots.min-retention configuration property or iceberg.expire_snapshots_min_retention session property", query_id=20260305_191945_00444_dffp9)
+
+<span style="color: red;">
+"TrinoUserError(type=USER_ERROR, name=INVALID_PROCEDURE_ARGUMENT, message="Retention specified (0.00d) is shorter than the minimum retention configured in the system (7.00d). Minimum retention can be changed with iceberg.expire_snapshots.min-retention configuration property or iceberg.expire_snapshots_min_retention session property", query_id=20260305_191945_00444_dffp9)"
+</span>
 
 ### Table Rollback
 
@@ -1284,11 +1287,12 @@ where
 
 ## Lab 10 - Data Visualization
 
-You can explore this dashboard -
+A example of dashboard:
 
 ![](images/dataviz-010.png)
 
-or create a new dashboard by the following steps:
+
+A quick way to create a new dashboard by the following steps:
 
 Navigate to DataVisualizaton and click on NEW DATASET
 
@@ -1309,12 +1313,14 @@ FROM postgres.airlinedata.customer_complaints c
 JOIN iceberg.db_user001.fct_flights f ON c.uniquecarrier = f.uniquecarrier AND c.flightnum = cast ( f.flightnum as varchar)
 JOIN iceberg.db_user001.dim_airports o ON f.origin = o.iata
 JOIN iceberg.db_user001.dim_airports d ON f.dest = d.iata
+WHERE f.year = 2000
 GROUP BY 1,2,3,4
 ORDER BY 2 DESC
 ```
 
 Click on Show Data
 Click on CREATE
+
 
 This Dataset shows and click on New Dashboard
 
