@@ -1348,21 +1348,37 @@ This Dataset shows and click on New Dashboard
 
 ![](images/cdwlab10-0010.png)
 
+The UI create a new visual screen and click on Explore Options in the upper right corner.
 
 ![](images/cdwlab10-0011.png)
 
+Click on Visual Types
+
 ![](images/cdwlab10-0012.png)
+
+Select the dimenions (three fields)
+- Routes
+- uniquecarrier
+- complaint_volume
+
+Click on SEE ALL VISUALS
 
 ![](images/cdwlab10-0013.png)
 
+Scroll up/down and select one of the proposed visuals i.e. Scattered w/Trendline
+
 ![](images/cdwlab10-0014.png)
+
+The selected visual appears in the window.
 
 ![](images/cdwlab10-0015.png)
 
+This show a fast Dashboard creation.
 
 ### Optional - Lab 10 Data Visualization - Step by Step
 
 ![](images/dataviz-011.png)
+
 
 `	`Open DataViz
 
