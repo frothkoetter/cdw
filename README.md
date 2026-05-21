@@ -973,6 +973,7 @@ FROM
 WHERE  
     year = 1995 AND month = 1 AND dayofmonth = 1;
 ```
+Expected outcome (one very long text line):
 | Query Plan |
 | :- |
 | Trino version: CDWH-2025.0.21.0-185-tag-1-g56ea7a7-dirty Queued: 116.40us, Analysis: |
@@ -1089,9 +1090,9 @@ Create the Hive managed table for airlines. Load initial by copy 1000 rows of cu
 
 ```sql
 -- Drop and recreate the target Iceberg table
-DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_scd_airlines;
+DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines_scd;
 
-CREATE TABLE iceberg.${your_dbname}.dim_scd_airlines (
+CREATE TABLE iceberg.${your_dbname}.dim_airlines_scd (
     code VARCHAR,
     description VARCHAR,
     updated_at TIMESTAMP(6),
@@ -1101,7 +1102,7 @@ CREATE TABLE iceberg.${your_dbname}.dim_scd_airlines (
 WITH (format = 'PARQUET');
 
 -- Initial load from Hive to Iceberg
-INSERT INTO iceberg.${your_dbname}.dim_scd_airlines
+INSERT INTO iceberg.${your_dbname}.dim_airlines_scd
 SELECT
     code,
     description,
