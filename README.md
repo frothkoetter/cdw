@@ -184,8 +184,7 @@ SELECT
   -- 1. NULLIF turns '' into NULL
   -- 2. CAST turns NULL (or the string) into an INTEGER
   -- 3. COALESCE turns that resulting NULL into 0
-  sum(coalesce(cast(nullif(depdelay, '') as integer), 0)) AS departure_delay_minutes,
-
+  avg(coalesce(cast(nullif(depdelay, '') as integer), 0)) AS avg_departure_delay_minutes,
   sum(case when coalesce(cast(nullif(depdelay, '') as integer), 0) > 0 then 1 else 0 end) as departure_delay_count
 FROM
   hive.${your_dbname}.flights_csv
@@ -590,7 +589,7 @@ We will delete rows and optimize the table that is configured for Merge-on-Read 
 
 Trino will write a few tiny .parquet files (the position deletes) to hide the rows.
 
-Later the we then perform a "compaction," which is essentially a delayed Copy-on-Write. It took the data + the position deletes and wrote a new "clean" data file.
+Later, we perform a "compaction," which is essentially a delayed Copy-on-Write. It took the data + the position deletes and wrote a new "clean" data file.
 
 Trino defaults to Merge-on-Read for Iceberg v2 tables because it allows for near-instant deletions. If you were forced into Copy-on-Write for an 86-million-row table, every single DELETE would take minutes as it rewrote gigabytes of data. With MoR, the delete takes milliseconds, and you "pay the tax" later during the optimize step.
 
