@@ -648,7 +648,7 @@ Expected output:
 | 3769149312242635307	| 2026-03-05 18:42:44.182 UTC | delete |	added-position-delete-files |	10 |
 | 3769149312242635307	| 2026-03-05 18:42:44.182 UTC	| delete | added-position-deletes |	45202 |
 
-What happened: Since you only targeted a few days, Trino didn't want to rewrite the large data files for that month. Instead, it created 4 Position Delete files.
+What happened: Since you only targeted a few days, Trino didn't want to rewrite the large data files for that month. Instead, it created a number of Position Delete files.
 
 The "Mask": The total-records remained at 86,289,323. The rows aren't gone; they are just "hidden" by the 4 new delete files. Every time you read this table now, Trino has to perform a real-time join to skip those 45k rows.
 
@@ -716,7 +716,7 @@ What happened: This was a "massive" cleanup. Because your table is partitioned b
 
 Actual Removal: Unlike the first query, the total-records dropped significantly from ~86M down to ~80.6M.
 
-Performance: This is the fastest type of delete in the big data world. It’s nearly instantaneous because it only updates the metadata manifest to say "ignore these 7 files."
+Performance: This is the fastest type of delete in the big data world. It’s nearly instantaneous because it only updates the metadata manifest to say "ignore these files."
 
 The deleted rows are marked into files and keeps the rows in the original data file or in other words the delete rows are not removed from the data files.
 
@@ -828,18 +828,18 @@ SELECT
     sum(record_count) AS total_records,
     round(sum(file_size_in_bytes) / 1024.0 / 1024.0, 2) AS size_mb
 FROM iceberg.${your_dbname}."fct_flights$files"
--- WHERE partition['year'] = 1995 -- Filter specifically for the optimized year
+WHERE partition.year = 1995 -- Filter specifically for the optimized year
 GROUP BY 1;
 ```
 | file_type	| file_count |	total_records |	size_mb |
 | :- | :- | :- | :- |
-| Data File (Clean) |	80 |	86289323 |	1048.0 |
+| Data File (Clean) |	1 |	5327435|	57.9 |
 
-Your table is now fully optimized with 80.5 million rows stored in 88 clean data files and zero delete debt, ensuring maximum read performance.
+Your table partition for year 1995 is now optimized with all rows stored in one clean data files and zero delete debt, ensuring maximum read performance.
 
 ## Lab 6 - Time Travel and Partition Evolution
 
-Apache Iceberg is a high-performance format for huge analytic tables for engines like Spark, Impala Flink and Hive to safely work with the same tables, at the same time.
+Apache Iceberg is a high-performance format for huge analytic tables for engines like Trino, Spark, Impala Flink and Hive to safely work with the same tables, at the same time.
 
 Creating a partitioned table with CREATE TABLE ... PARTITIONED BY & STORED BY ICEBERG syntax enables you to create identity-partitioned Iceberg tables. Identity-partitioned Iceberg tables are similar to the regular partitioned tables and are stored in the same directory structure as the regular partitioned tables.
 
@@ -1083,9 +1083,9 @@ A Type 2 SCD retains the full history of values. When the value of a chosen attr
 
 ![](images/cdw-lab7-001.png)
 
-We create a new SDC table ***scd\_airline*** and add columns ***valid\_from*** and ***valid\_to***. Then loading the initial into this SDC table, then mock up new data and change data in the table ***airlines\_stage***.
+We create a new SCD table ***scd\_airline*** and add columns ***valid\_from*** and ***valid\_to***. Then loading the initial into this SCD table, then mock up new data and change data in the table ***airlines\_stage***.
 
-Create the Hive managed table for airlines. Load initial by copy 1000 rows of current airlines with hard code the valid_from date
+Create the managed table for airlines. Load initial by copy 1000 rows of current airlines with hard code the valid_from date
 
 ```sql
 -- Drop and recreate the target Iceberg table
@@ -1115,7 +1115,7 @@ Expected outcome
 | :- |
 | 1491 |
 
-Create an external staging table pointing to our complete airlines dataset (1491 records), add one row, update a description and delete two rows to mockup a change in the dimension
+Create an external staging table pointing to our complete airlines dataset (1491 records), add one row, update a description and delete one row to mockup a change in the dimension
 
 ```sql
 DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines_stg;
@@ -1247,7 +1247,6 @@ Results
 |02Q	|Update - TITAN AIRWAYS	|2024-04-11 12:06:15.649675	|9999-01-01 00:00:00|
 |04Q	|Tradewind Aviation	|2021-01-01 00:00:00	|2026-03-11 12:06:15.649675|
 |FFF	|New Airline	|2026-03-11 12:06:15.649675	|9999-01-01 00:00:00|
-|-----
 
 -----
 
@@ -1326,14 +1325,14 @@ Enter SQL below:
 ```sql
 SELECT
     o.city || ' to ' || d.city AS route,
-    o.city as origion,
+    o.city as origin,
     d.city as destination,
     f.uniquecarrier ,
     COUNT(c.complaint_id) AS complaint_volume  
 FROM postgres.airlinedata.customer_complaints c
-JOIN iceberg.db_user001.fct_flights f ON c.uniquecarrier = f.uniquecarrier AND c.flightnum = cast ( f.flightnum as varchar)
-JOIN iceberg.db_user001.dim_airports o ON f.origin = o.iata
-JOIN iceberg.db_user001.dim_airports d ON f.dest = d.iata
+JOIN iceberg.airlinedata.fct_flights f ON c.uniquecarrier = f.uniquecarrier AND c.flightnum = cast ( f.flightnum as varchar)
+JOIN iceberg.airlinedata.dim_airports o ON f.origin = o.iata
+JOIN iceberg.airlinedata.dim_airports d ON f.dest = d.iata
 WHERE f.year = 2000
 GROUP BY 1,2,3,4
 ORDER BY 2 DESC
@@ -1641,7 +1640,7 @@ The red circle marks the currently selected entity. Atlas will always display th
 
 ##  - Geospatial Queries
 
-Exploring the geospatial functions of Hive that are based on the HIVE_ESRI framework.
+Exploring the geospatial functions of Trino that are based on the HIVE_ESRI framework.
 see: https://hive.apache.org/docs/latest/language/hive-udfs/#geospatial
 
 Start create a table of all counties in the US state California.
