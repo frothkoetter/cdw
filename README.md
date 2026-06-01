@@ -173,7 +173,7 @@ Run exploratory queries to understand the data. This reads the CSV data, convert
 
 QUERY: Airline Delay Aggregate Metrics by Airplane.
 
-DESCRIPTION: Customer Experience Reporting showing airplanes that have the highest average delays, causing the worst customer experience.
+DESCRIPTION: Customer Experience Reporting showing airplanes that have the highest total sum of delays, causing the a bad experience.
 
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
@@ -184,21 +184,21 @@ SELECT
   -- 1. NULLIF turns '' into NULL
   -- 2. CAST turns NULL (or the string) into an INTEGER
   -- 3. COALESCE turns that resulting NULL into 0
-  avg(coalesce(cast(nullif(depdelay, '') as integer), 0)) AS avg_departure_delay_minutes,
+  sum(coalesce(cast(nullif(depdelay, '') as integer), 0)) AS sum_departure_delay_minutes,
   sum(case when coalesce(cast(nullif(depdelay, '') as integer), 0) > 0 then 1 else 0 end) as departure_delay_count
 FROM
   hive.${your_dbname}.flights_csv
 GROUP BY
   tailnum
 ORDER BY
-  departure_delay_minutes DESC
+  avg_departure_delay_minutes DESC
 LIMIT 5;
 ```
 Note: Running the first time may take some time.
 
 Results
 
-|tailnum	| flights_count | departure_delay_minutes |	 departure_delay_count|
+|tailnum	| flights_count | sum_departure_delay_minutes |	 departure_delay_count|
 | :- | :- | :- | :- |
 |N381UA	| 25287 |341368 | 12280	|
 |N375UA	| 25147 |341103	| 12162 |
