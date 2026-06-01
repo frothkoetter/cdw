@@ -473,6 +473,8 @@ SELECT
     a.iata,
     a.airport,
     a.city,
+    a.lon,
+    a.lat,
     -- Calculate distance using built-in Great Circle function
     ROUND(great_circle_distance(a.lat, a.lon, r.ref_lat, r.ref_lon), 2) AS distance_km
 FROM
@@ -500,6 +502,13 @@ Expect output
 |LVK | Livermore Municipal	| Livermore	|	49.51 |
 |CCR |	Buchanan	| Concord	|	49.79 |
 
+To visualize that in a map select Marker Map from the drop down lists
+
+![](images/cdw-geoquery-001.png)
+
+and select the fields lon = Longitude and lat = Latitude for the Map
+
+![](images/cdw-geoquery-002.png)
 
 ### Surrogate Key - optional
 
