@@ -192,7 +192,7 @@ FROM
 GROUP BY
   tailnum
 ORDER BY
-  avg_departure_delay_minutes DESC
+  sum_departure_delay_minutes DESC
 LIMIT 5;
 ```
 Note: Running the first time may take some time.
