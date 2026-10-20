@@ -22,22 +22,26 @@ Navigate to Data Warehouse, then Trino Virtual Warehouse and open the HUE SQL Au
 Create new schema for your user to be used, or use one that is already created for you.
 
 ```sql
--- 1. Create the schema in the catalogs for Hive and Iceberg
+-- Create the schema in the catalogs for Hive and Iceberg
 CREATE SCHEMA db_user001;
 ```
 
 Refresh on the left panel the list of schema
+
 ![](images/lab1_update_schema.png)
 
-Set the schema as workspace for the session.
+Your schema should appear with hive.db_user*** and iceberg.db_user***
 
-Select your schema db_use***
+
+
+Set the schema as workspace for the session, select your schema db_use***
 
 ![](images/lab1_set_schema.png)
 
+Now you working in this schema.
 
 ```sql
-- 3. Verify your context (should show 'iceberg' and 'db_user0')
+-- Verify your context (should show 'iceberg' and 'db_user0')
 SELECT current_catalog, current_schema;
 ```
 -----
