@@ -309,6 +309,10 @@ FROM hive.${your_dbname}.flights_csv;
 
 This takes a few minutes to read and write the data back.
 
+Ignore: this hint top of the workspace.
+
+![](images/lab2_ignore_hint.png)
+
 Check that you created managed & external tables
 
 ```sql
