@@ -32,7 +32,7 @@ Copy the SQL code and paste into Data Explorer and run the query.
 
 Refresh on the left panel the list of schema
 
-![](images/lab1_update_schema.png)
+![](images/lab1_refresh.png)
 
 Your schema appears as hive.db_userXXX and iceberg.db_userXXX
 
