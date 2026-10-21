@@ -32,7 +32,7 @@ Refresh on the left panel the list of schema
 
 Your schema should appear with hive.db_user*** and iceberg.db_user***
 
-
+[](images/lab1_db_list_refresh.png)
 
 Set the schema as workspace for the session, select your schema db_use***
 
