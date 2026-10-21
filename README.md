@@ -45,10 +45,13 @@ Set the schema as workspace for the session, select your schema db_use***
 Now you working in this schema.
 
 ```sql
--- Verify your context (should show 'iceberg' and 'db_user0')
+-- Verify your context (should show 'hive' and 'db_userXXX')
 SELECT current_catalog, current_schema;
 ```
------
+
+![](images/lab1_current_schema.png)
+
+
 ## Lab 2 - External Tables
 
 Run DDL to create four external tables on the CSV data files, which are already in cloud object storage.
