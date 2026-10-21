@@ -26,6 +26,10 @@ Create new schema for your user to be used, or use one that is already created f
 CREATE SCHEMA db_user001;
 ```
 
+Copy the SQL code and paste into Data Explorer and run the query.
+
+![](images/lab1_run.png)
+
 Refresh on the left panel the list of schema
 
 ![](images/lab1_update_schema.png)
