@@ -326,7 +326,7 @@ Wait until loading disappears:
 
 ![](images/lab2_loading.png)
 
-and the table fct_flights is created 
+and the table fct_flights is created
 
 ![](images/lab2_result.png)
 
@@ -801,6 +801,9 @@ Start finding the Origin: Your query identifies the unique Snapshot ID when crea
 
 
 ```sql
+/*
+** Table Rollback
+*/
 SELECT
     snapshot_id,
     committed_at,
@@ -824,7 +827,11 @@ Expected outcome:
 The Rollback Call: The CALL iceberg.system.rollback_to_snapshot(...) is a metadata-only operation. It doesn't move data; it simply tells the Iceberg table to ignore every DELETE, OVERWRITE, and REPLACE (Optimize) that happened.
 
 ```sql
--- DANGER ZONE: This changes the 'main' branch pointer back to the initial load
+/*
+** Table Rollback
+** DANGER ZONE: This changes the 'main' branch pointer back to the initial load
+*/
+
 CALL iceberg.system.rollback_to_snapshot('${your_dbname}', 'fct_flights', ****snapshot_id****);
 ```
 The Result: When you run the final SELECT count(1), you should see your original 86,289,323 rows reappear instantly.
@@ -854,7 +861,7 @@ Once completed, the $snapshots table will record a replace operation, indicating
 
 ```sql
 /*
-** Optimize the files
+** Tables Maintenance - Optimize the files
 */
 -- This "bakes" the 1995 deletes into new, clean data files
 ALTER TABLE iceberg.${your_dbname}.fct_flights
@@ -894,6 +901,10 @@ Creating a partitioned table with CREATE TABLE ... PARTITIONED BY & STORED BY IC
 Lets create a new table with Iceberg format and insert rows in batches:
 
 ```sql
+/*
+** Time Travel and Partition Evolution
+*/
+
 DROP TABLE IF EXISTS iceberg.${your_dbname}.fct_flights_history_lab;
 
 -- Create a sandbox table for the year 1995
