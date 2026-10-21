@@ -957,6 +957,9 @@ Time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME.
 Pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace ***SNAPSHOT_ID***
 
 ```sql
+
+-- copy the snapshot_id from previous output and replace *************** 
+
 SELECT
     year,
     month,
