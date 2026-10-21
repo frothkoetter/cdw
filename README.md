@@ -30,9 +30,9 @@ Refresh on the left panel the list of schema
 
 ![](images/lab1_update_schema.png)
 
-Your schema appears as hive.db_user*** and iceberg.db_user***
+Your schema appears as hive.db_userXXX and iceberg.db_userXXX
 
-[](images/lab1_db_list_refresh.png)
+![](images/lab1_db_list_refresh.png)
 
 Set the schema as workspace for the session, select your schema db_use***
 
