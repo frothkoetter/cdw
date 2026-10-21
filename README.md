@@ -902,7 +902,7 @@ Lets create a new table with Iceberg format and insert rows in batches:
 
 ```sql
 /*
-** Time Travel and Partition Evolution
+** Time Travels
 */
 
 DROP TABLE IF EXISTS iceberg.${your_dbname}.fct_flights_history_lab;
@@ -958,7 +958,7 @@ Pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace ***SNA
 
 ```sql
 
--- copy the snapshot_id from previous output and replace *************** 
+-- copy the snapshot_id from first row previous output and replace ***************
 
 SELECT
     year,
@@ -984,6 +984,8 @@ Result: Only data from the first insert Year: 1995 Months 1-6
 |1995	| 5	| 448341 |
 |1995	| 6	| 439423 |
 
+##Partition Evolution
+
 Next is Partition Evolution: this is a feature when partition layout can be updated as data or queries change and users are not required to maintain partition columns.
 
 ![](images/IcebergPartitionEvo.png)
@@ -993,6 +995,11 @@ With Iceberg’s hidden partitions the tables separation between physical and lo
 Lets change the partition schema to YEAR & MONTH & DAYOFMONTH and insert data of *ONE* day
 
 ```sql
+/*
+** Partition Evolution
+*/
+
+
 -- Trino uses the ALTER TABLE SET PROPERTIES syntax for Iceberg evolution
 ALTER TABLE iceberg.${your_dbname}.fct_flights_history_lab
 SET PROPERTIES partitioning = ARRAY['year', 'month', 'dayofmonth'];
@@ -1037,7 +1044,7 @@ WHERE
 Expected outcome (one very long text line):
 | Query Plan |
 | :- |
-| Trino version: CDWH-2025.0.21.0-185-tag-1-g56ea7a7-dirty Queued: 116.40us, Analysis: |
+| Trino version: Trino version: CDWH-2025.0.21.0-185-tag-1-g56ea7a7-dirty Queued: 197.90us, Analysis: 102.64ms, Planning: 54.76ms, Execution: 251.02ms ... |
 
 ```sql
 -- Query 2: Data from the second insert (Newer evolved partition)
@@ -1055,7 +1062,7 @@ Expected outcome (one very long text line):
 
 | Query Plan |
 | :- |
-| Trino version: CDWH-2025.0.21.0-185-tag-1-g56ea7a7-dirty Queued: 115.25us, Analysis: 99.37ms, Planning: 88.61ms, Execution: 332.29ms ... |
+| Trino version: rino version: CDWH-2025.0.21.0-185-tag-1-g56ea7a7-dirty Queued: 146.74us, Analysis: 109.17ms, Planning: 50.61ms, Execution: 201.29ms |
 
 
 The following compares the performance benefits of Iceberg Partition Evolution.
@@ -1064,7 +1071,7 @@ In the second plan, the data was written after the partition spec was made more 
 
 | Metric | Query 2 (Year 2026) | Query 1 (Year 1995) |
 | :- | :- | :- |
-| Total Execution Time | 214.92 ms 🚀 | 385.49 ms 🐢 |
+| Total Execution Time | 291.29 ms 🚀 | 385.49 ms 🐢 |
 | Rows Scanned (Input) | 14,175 rows | 2,673,586 rows |
 | Physical Input Size | 257.18 kB | 5.08 MB |
 | Filter Efficiency | 0% Filtered (Direct hit) | 99.47% Filtered (Over-scan) |
@@ -1079,10 +1086,13 @@ Trino’s federated query capability serves as a modern architectural feature by
 
 Quick check query a table in PostgreSQL
 ```sql
+/*
+** Federated Query
+*/
 select * from  postgres.airlinedata.customer_complaints Limit 3;
  ```
 
-Expected outcome
+This is a sample outcome
 
 |complaint_id|	complaint_date|	customer_email	|complaint_category	|complaint_text	|uniquecarrier|	flightnum|	delay_minutes	|severity_score|
 | :- | :- | :- | :- | :- | :- | :- | :- | :- |
@@ -1099,6 +1109,8 @@ Lets create a federated query with dataset from PostgreSQL and Iceberg.
 Purpose of this query is to  identify service trends by carrier and aircraft model. By performing complex cross-catalog joins and data type conversions, it allows for a unified analysis of customer sentiment against physical assets without the need for data movement or pre-processing.
 
  ```sql
+-- cross-catalog joins
+
 SELECT
     f.uniquecarrier,
     p.model AS aircraft_model,
@@ -1134,7 +1146,7 @@ Expected outcome (may vary)
  |DL|	757-232	|1402	|3.1|
 
 
- This lab demonstrates that Trino’s query federation effectively collapses data silos by enabling real-time joins between operational PostgreSQL feedback and historical Iceberg flight archives. By eliminating the need for data movement, you’ve established a high-performance architecture that delivers immediate visibility into how specific aircraft models impact the overall customer experience.
+ This lab demonstrates that Trino’s query federation effectively collapses data silos by enabling real-time joins between operational PostgreSQL feedback and Iceberg tables. By eliminating the need for data movement, you’ve established a high-performance architecture that delivers immediate visibility into how specific aircraft models impact the overall customer experience.
 
 ----
 ## Lab 8 - Slowly Changing Dimensions (SCD) - TYPE 2
@@ -1150,6 +1162,10 @@ We create a new SCD table ***scd\_airline*** and add columns ***valid\_from*** a
 Create the managed table for airlines. Load initial by copy 1000 rows of current airlines with hard code the valid_from date
 
 ```sql
+/*
+** Slowly Changing Dimensions
+*/
+
 -- Drop and recreate the target Iceberg table
 DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines_scd;
 
@@ -1326,6 +1342,12 @@ In this example we defined a dynamic masking policy on the ***customer_email*** 
 Query the data
 
 ```sql
+/*
+** Data Governance and Security
+*/
+
+-- column masking customer_email redacted
+
 select
   complaint_date,
   customer_email,
