@@ -54,7 +54,7 @@ SELECT current_catalog, current_schema;
 
 ## Lab 2 - External Tables
 
-Run DDL to create four external tables on the CSV data files, which are already in cloud object storage.
+Copy & Paste DDL to create four external tables on the CSV data files, which are already in cloud object storage.
 
 ```sql
 -- 1. Planes Table
@@ -150,6 +150,12 @@ WITH (
 
 
 ```
+
+Put your schema name in the parameter field
+
+![](images/lab2_put_schema.png)
+
+You can select and run every DDL to create the tables.
 
 
 Check that you created tables
@@ -315,6 +321,14 @@ FROM hive.${your_dbname}.flights_csv;
 ```
 
 This takes a few minutes to read and write the data back.
+
+Wait until loading disappears:
+
+![](images/lab2_loading.png)
+
+and the table fct_flights is created 
+
+![](images/lab2_result.png)
 
 Ignore: this hint top of the workspace.
 
