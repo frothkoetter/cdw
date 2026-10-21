@@ -30,7 +30,7 @@ Refresh on the left panel the list of schema
 
 ![](images/lab1_update_schema.png)
 
-Your schema should appear with hive.db_user*** and iceberg.db_user***
+Your schema appears as hive.db_user*** and iceberg.db_user***
 
 [](images/lab1_db_list_refresh.png)
 
