@@ -1373,6 +1373,9 @@ The enforcement engine intercepted the request and alters the data depending on 
 When a Redaction policy is active, the engine evaluates the WHERE clause against the transformed value (e.g., x.xxxxxx000@xxxxx.xxx), causing a mismatch with the original clear-text string.
 
 ```sql
+
+-- targeted query 
+
 select
   complaint_date,
   customer_email,
