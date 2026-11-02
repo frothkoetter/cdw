@@ -797,7 +797,6 @@ EXECUTE expire_snapshots(retention_threshold => '0d');
 ```
 Expected outcome:
 
-
 <span style="color: red;">TrinoUserError(type=USER_ERROR, name=INVALID_PROCEDURE_ARGUMENT, message="Retention specified (0.00d) is shorter than the minimum retention configured in the system (7.00d). Minimum retention can be changed with iceberg.expire_snapshots.min-retention configuration property or iceberg.expire_snapshots_min_retention session property", query_id=20260305_191945_00444_dffp9)</span>
 
 ### Table Rollback
@@ -883,6 +882,10 @@ Note: this may need some time to finish.
 After running this, if you check your $snapshots table again, you will see a new replace operation:
 
 ```sql
+/*
+** query snapsots new single file for one year
+*/
+
 SELECT
     CASE content
         WHEN 0 THEN 'Data File (Clean)'
@@ -1233,6 +1236,7 @@ Expected outcome
 We now execute a single MERGE statement. This logic is sophisticated: it identifies records to expire (setting valid_to to the current time) and records to insert as the new "active" version.
 
 ```sql
+-- 4. Merge all changes into the target table
 MERGE INTO iceberg.${your_dbname}.dim_airlines_scd AS target
 USING (
     -- PART A: New records that don't exist in target
@@ -1315,6 +1319,7 @@ Expected outcome
 View the changed records and see that the VALID_FROM and VALID_TO dates are set
 
 ```sql
+-- 5. Check the outcome of the merge operation
 SELECT
     code,
     description,
