@@ -645,6 +645,8 @@ Delete a few days in Jan 1995.
 
 ```sql
 /*
+** Snapshots - Merge-on-Read (Position Deletes)
+**
 ** delete few days of data
 */
 DELETE FROM iceberg.${your_dbname}.fct_flights
@@ -662,8 +664,11 @@ Soft delete: 45k rows marked for deletion wrote in a few tiny .parquet files (th
 This query shows the number of delete files and the number of rows (added-position-deletes)
 
 ```sql
+/*
+** Find the most recent snapshot ID that added delete files
+*/
+
 WITH LastDeleteSnapshot AS (
-    -- Find the most recent snapshot ID that added delete files
     SELECT snapshot_id
     FROM iceberg.${your_dbname}."fct_flights$snapshots"
     WHERE operation IN ('overwrite', 'delete')
@@ -710,6 +715,8 @@ Delete the entire year 2000.
 
 ```sql
 /*
+** Snapshots Partition Drop (Metadata-only)
+**
 ** delete a full year of data (one partition)
 */
 DELETE FROM iceberg.${your_dbname}.fct_flights
@@ -726,8 +733,11 @@ Expected output:
 This query shows the number of delete files and the number of rows (deleted-records)
 
 ```sql
+/*
+** Find the most recent snapshot ID that added delete files
+*/
+
 WITH LastDeleteSnapshot AS (
-    -- Find the most recent snapshot ID that added delete files
     SELECT snapshot_id
     FROM iceberg.${your_dbname}."fct_flights$snapshots"
     WHERE operation IN ('overwrite', 'delete')
@@ -776,6 +786,8 @@ To remove the unused data we now expire the snapshots and remove the data pyhsic
 
 ```sql
 /*
+** Snapshots Maintenance
+**
 ** expire all snapshots that will remove all unused the data and delete files
 */
 
