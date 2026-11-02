@@ -1407,7 +1407,9 @@ where
  This ensures that even if an unauthorized user knows a specific email address, Cloudera SDX prevents them from confirming its existence or accessing the record.
 
 
-## Lab 10 - Data Visualization
+# BONUS MATERIAL 
+
+## (optional) Lab 10 - Data Visualization
 
 A example of dashboard:
 
