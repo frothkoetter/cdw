@@ -57,6 +57,10 @@ SELECT current_catalog, current_schema;
 Copy & Paste DDL to create four external tables on the CSV data files, which are already in cloud object storage.
 
 ```sql
+/*
+** External tables
+*/
+
 -- 1. Planes Table
 DROP TABLE IF EXISTS hive.${your_dbname}.flights_csv;
 CREATE TABLE hive.${your_dbname}.flights_csv (
@@ -244,6 +248,10 @@ Run “CREATE TABLE AS SELECT” queries to create full features ICEBERG v2 type
 *Do all these steps in * **“iceberg.db\_user001”..”db\_user020”**
 
 ```sql
+/*
+** Iceberg Tables
+*/
+
 -- 1. airlines create Iceberg table
 DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines;
 CREATE TABLE iceberg.${your_dbname}.dim_airlines
