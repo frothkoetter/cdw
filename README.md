@@ -178,6 +178,7 @@ Results
 Query external tables to see few samples pointing to the right files
 
 ```sql
+-- test select a few rows
 SELECT
   *
 FROM  
@@ -204,6 +205,7 @@ DESCRIPTION: Customer Experience Reporting showing airplanes that have the highe
 *Do all these steps in the* **“db\_user001”..”db\_user020”** *unless otherwise noted.*
 
 ```sql
+-- exploratory query on raw data
 SELECT
   tailnum,
   count(*) as flights_count,
@@ -242,7 +244,7 @@ Run “CREATE TABLE AS SELECT” queries to create full features ICEBERG v2 type
 *Do all these steps in * **“iceberg.db\_user001”..”db\_user020”**
 
 ```sql
--- 1. Airlines Table
+-- 1. airlines create Iceberg table
 DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines;
 CREATE TABLE iceberg.${your_dbname}.dim_airlines
 WITH (format = 'PARQUET')
@@ -252,7 +254,7 @@ SELECT
     description
 FROM hive.${your_dbname}.airlines_csv;
 
--- 2. Airports Table
+-- 2. airports create Iceberg Table
 DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airports;
 CREATE TABLE iceberg.${your_dbname}.dim_airports
 WITH (format = 'PARQUET')
@@ -267,7 +269,7 @@ SELECT
     CAST(lon AS DOUBLE) as lon
 FROM hive.${your_dbname}.airports_csv;
 
--- 3. Planes Table
+-- 3. planes create Iceberg Table
 DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_planes;
 CREATE TABLE iceberg.${your_dbname}.dim_planes
 WITH (format = 'PARQUET')
@@ -278,7 +280,7 @@ SELECT
     CAST(NULLIF(year, '') AS INTEGER) as year
 FROM hive.${your_dbname}.planes_csv;
 
--- 4. Flights Table (Partitioned by Year)
+-- 4. Flights (Partitioned by Year) Iceberg Table
 DROP TABLE IF EXISTS iceberg.${your_dbname}.fct_flights;
 CREATE TABLE iceberg.${your_dbname}.fct_flights
 WITH (
@@ -356,6 +358,7 @@ Results
 The shows detailed information about the table.
 
  ```sql
+-- shows detailed information
 DESCRIBE iceberg.${your_dbname}.fct_flights ;
  ```
 Result: column names with types
@@ -371,6 +374,7 @@ Result: column names with types
 Show column statistics of the created iceberg table.
 
  ```sql
+-- Show column statistics
 SHOW STATS FOR iceberg.${your_dbname}.fct_flights;
  ```
 
@@ -393,6 +397,8 @@ Looking deeper into the partitioning as in Apache Iceberg, partitions are tracke
 Lets look deeper into partitions of the "fct_flights" table:
 
  ```sql
+ -- view flight table partitions
+
  SELECT partition, record_count, file_count, total_size   
  FROM iceberg.${your_dbname}."fct_flights$partitions"
  ORDER BY partition;
@@ -415,6 +421,7 @@ Experiment with different queries to see effects of the columnar storage format 
 QUERY: Airline Delay Aggregate Metrics by Airplane on managed table
 
 ```sql
+-- run query with aggregation
 SELECT
   tailnum,
   count(*) as flights_count,
@@ -446,6 +453,7 @@ The "Airline Marathon" Common Table Expression (CTE) structure
 This is a CTE-type query (using the WITH clause). It first calculates the top 5 airlines by total mileage in an initial sub-block, then joins that result to the flight data to find the single longest route for each.
 
 ```sql
+-- use Common Table Expression (CTE) for better reading
 WITH TopAirlines AS (
     -- Identify the 5 airlines with the most total mileage
     SELECT
@@ -499,6 +507,7 @@ Trino's geospatial functions convert raw latitude and longitude data into a rela
 This query identifies all airports within a 50-kilometer radius of San Francisco International Airport (SFO) by dynamically retrieving SFO's coordinates and calculating the spherical distance to every other airport in the table using a geospatial join.
 
 ```sql
+-- Query data with geospatial features
 WITH reference_point AS (
     -- Get the base coordinates for SFO
     SELECT
@@ -554,6 +563,10 @@ and select the fields lon = Longitude and lat = Latitude for the Map
 Trino can use UUID as surrogate keys easy & distributable & fast, but not in sequence and has gaps.
 
 ```sql
+/*
+** Create a Surrogate Key
+*/
+-- 1. Surrogate Keys create target table structure
 DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines_with_surrogate_key;
 
 CREATE TABLE iceberg.${your_dbname}.dim_airlines_with_surrogate_key (
@@ -563,6 +576,7 @@ CREATE TABLE iceberg.${your_dbname}.dim_airlines_with_surrogate_key (
     description VARCHAR
 );
 
+-- 2. Insert rows with UUID()
 INSERT INTO iceberg.${your_dbname}.dim_airlines_with_surrogate_key (id, code, description)
 SELECT
   cast( uuid() as varchar),
@@ -570,6 +584,7 @@ SELECT
 FROM
   hive.${your_dbname}.airlines_csv;
 
+-- 3. query the table with ID = UUID()
 SELECT
  *
 FROM  
@@ -592,6 +607,9 @@ Note: the first column is the new unique SURROGATE_KEY
 ### Create a SEQUENCE - optional
 
 ```sql
+/*
+** Create a SEQUENCE
+*/
 -- 1. Create the target table structure
 DROP TABLE IF EXISTS iceberg.${your_dbname}.airlines_with_seq;
 
@@ -647,7 +665,7 @@ Delete a few days in Jan 1995.
 /*
 ** Snapshots - Merge-on-Read (Position Deletes)
 **
-** delete few days of data
+** 1. delete few days of data
 */
 DELETE FROM iceberg.${your_dbname}.fct_flights
 WHERE
@@ -665,7 +683,7 @@ This query shows the number of delete files and the number of rows (added-positi
 
 ```sql
 /*
-** Find the most recent snapshot ID that added delete files
+** 2. Find the most recent snapshot ID that added delete files
 */
 
 WITH LastDeleteSnapshot AS (
@@ -717,7 +735,7 @@ Delete the entire year 2000.
 /*
 ** Snapshots Partition Drop (Metadata-only)
 **
-** delete a full year of data (one partition)
+** 1. delete a full year of data (one partition)
 */
 DELETE FROM iceberg.${your_dbname}.fct_flights
 WHERE
@@ -734,7 +752,7 @@ This query shows the number of delete files and the number of rows (deleted-reco
 
 ```sql
 /*
-** Find the most recent snapshot ID that added delete files
+** 2. Find the most recent snapshot ID that added delete files
 */
 
 WITH LastDeleteSnapshot AS (
@@ -789,6 +807,8 @@ To remove the unused data we now expire the snapshots and remove the data pyhsic
 ** Snapshots Maintenance
 **
 ** expire all snapshots that will remove all unused the data and delete files
+**
+** expected to fail!
 */
 
 -- Removes the old, unoptimized physical files from storage
@@ -812,6 +832,8 @@ Start finding the Origin: Your query identifies the unique Snapshot ID when crea
 ```sql
 /*
 ** Table Rollback
+**
+** 1. show snapshots
 */
 SELECT
     snapshot_id,
@@ -837,7 +859,7 @@ The Rollback Call: The CALL iceberg.system.rollback_to_snapshot(...) is a metada
 
 ```sql
 /*
-** Table Rollback
+** 2. Table Rollback
 ** DANGER ZONE: This changes the 'main' branch pointer back to the initial load
 */
 
@@ -846,6 +868,7 @@ CALL iceberg.system.rollback_to_snapshot('${your_dbname}', 'fct_flights', ****sn
 The Result: When you run the final SELECT count(1), you should see your original 86,289,323 rows reappear instantly.
 
 ```sql
+-- query restored table
 SELECT
   count(1) num_rows
 FROM
@@ -872,7 +895,7 @@ Once completed, the $snapshots table will record a replace operation, indicating
 /*
 ** Tables Maintenance - Optimize the files
 */
--- This "bakes" the 1995 deletes into new, clean data files
+-- 1. This "bakes" the 1995 deletes into new, clean data files
 ALTER TABLE iceberg.${your_dbname}.fct_flights
 EXECUTE optimize
 WHERE year = 1995;
@@ -883,7 +906,7 @@ After running this, if you check your $snapshots table again, you will see a new
 
 ```sql
 /*
-** query snapsots new single file for one year
+** 2. query snapsots new single file for one year
 */
 
 SELECT
@@ -918,15 +941,15 @@ Lets create a new table with Iceberg format and insert rows in batches:
 ** Time Travels
 */
 
+-- 1. Create a sandbox table for the year 1995
 DROP TABLE IF EXISTS iceberg.${your_dbname}.fct_flights_history_lab;
 
--- Create a sandbox table for the year 1995
 CREATE TABLE iceberg.${your_dbname}.fct_flights_history_lab
 AS
 SELECT * FROM iceberg.${your_dbname}.fct_flights
 WHERE year = 1995 AND month <= 6;
 
--- Insert a second batch of data (This creates a second snapshot)
+-- 2. Insert a second batch of data (This creates a second snapshot)
 INSERT INTO iceberg.${your_dbname}.fct_flights_history_lab
 SELECT * FROM iceberg.${your_dbname}.fct_flights
 WHERE year = 1995 AND month > 6;
@@ -938,6 +961,7 @@ Now all rows for one year inserted into the table fct_flights_history_lab.
 Check the count of all rows inserted previouly:
 
 ```sql
+-- 3. count of all rows inserted
 select
  count(*) row_count
 from
@@ -954,7 +978,7 @@ Result:
 Now see the snapshots of the table.
 
 ```sql
--- View the snapshots and timestamps
+-- 4. View the snapshots and timestamps
 SELECT snapshot_id, parent_id, operation, committed_at
 FROM iceberg.${your_dbname}."fct_flights_history_lab$snapshots";
 ```
@@ -970,7 +994,7 @@ Time travel to one of the versions using SYSTEM_VERSION or SYSTEM_TIME.
 Pick the number of FLIGHTS_ICE.SNAPSHOT_ID from the first row and replace ***SNAPSHOT_ID***
 
 ```sql
-
+-- 5. query snapshots
 -- copy the snapshot_id from first row previous output and replace ***************
 
 SELECT
@@ -1407,7 +1431,7 @@ where
  This ensures that even if an unauthorized user knows a specific email address, Cloudera SDX prevents them from confirming its existence or accessing the record.
 
 
-# BONUS MATERIAL 
+# BONUS MATERIAL
 
 ## (optional) Lab 10 - Data Visualization
 
