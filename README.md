@@ -1037,7 +1037,7 @@ Lets change the partition schema to YEAR & MONTH & DAYOFMONTH and insert data of
 */
 
 
--- Trino uses the ALTER TABLE SET PROPERTIES syntax for Iceberg evolution
+-- 1. Trino uses the ALTER TABLE SET PROPERTIES syntax for Iceberg evolution
 ALTER TABLE iceberg.${your_dbname}.fct_flights_history_lab
 SET PROPERTIES partitioning = ARRAY['year', 'month', 'dayofmonth'];
 
@@ -1068,7 +1068,7 @@ Now lets see the impact what the difference is, lets run two queries and note th
 
 Count the records for one year and month that is inserted before the partition:
 ```sql
--- Query 1: Data from the first insert (Older partition spec)
+-- 2 Query: Data from the first insert (Older partition spec)
 EXPLAIN ANALYZE
 SELECT
     count(*) as row_count,
@@ -1084,7 +1084,7 @@ Expected outcome (one very long text line):
 | Trino version: Trino version: CDWH-2025.0.21.0-185-tag-1-g56ea7a7-dirty Queued: 197.90us, Analysis: 102.64ms, Planning: 54.76ms, Execution: 251.02ms ... |
 
 ```sql
--- Query 2: Data from the second insert (Newer evolved partition)
+-- 3 Query Data from the second insert (Newer evolved partition)
 EXPLAIN ANALYZE
 SELECT
     count(*) as row_count,
@@ -1203,7 +1203,7 @@ Create the managed table for airlines. Load initial by copy 1000 rows of current
 ** Slowly Changing Dimensions
 */
 
--- Drop and recreate the target Iceberg table
+-- 1. Drop and recreate the target Iceberg table
 DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines_scd;
 
 CREATE TABLE iceberg.${your_dbname}.dim_airlines_scd (
@@ -1215,7 +1215,7 @@ CREATE TABLE iceberg.${your_dbname}.dim_airlines_scd (
 )
 WITH (format = 'PARQUET');
 
--- Initial load from Hive to Iceberg
+-- 2. Initial load from Hive to Iceberg
 INSERT INTO iceberg.${your_dbname}.dim_airlines_scd
 SELECT
     code,
@@ -1233,22 +1233,23 @@ Expected outcome
 Create an external staging table pointing to our complete airlines dataset (1491 records), add one row, update a description and delete one row to mockup a change in the dimension
 
 ```sql
+-- 4. Create staging table with current data
+
 DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines_stg;
 
--- Create staging table with current data
 CREATE TABLE iceberg.${your_dbname}.dim_airlines_stg AS
 SELECT code, description FROM hive.${your_dbname}.airlines_csv;
 
--- 1. Insert one row (New record)
+-- 5. Insert one row (New record)
 INSERT INTO iceberg.${your_dbname}.dim_airlines_stg (code, description)
 VALUES ('FFF', 'New Airline');
 
--- 2. Update a description (Modified record)
+-- 6. Update a description (Modified record)
 UPDATE iceberg.${your_dbname}.dim_airlines_stg
 SET description = concat('Update - ', upper(description))
 WHERE code = '02Q';
 
--- 3. Delete a row (Removed record in source)
+-- 7. Delete a row (Removed record in source)
 DELETE FROM iceberg.${your_dbname}.dim_airlines_stg
 WHERE code = '04Q';
 ```
@@ -1260,7 +1261,7 @@ Expected outcome
 We now execute a single MERGE statement. This logic is sophisticated: it identifies records to expire (setting valid_to to the current time) and records to insert as the new "active" version.
 
 ```sql
--- 4. Merge all changes into the target table
+-- 8. Merge all changes into the target table
 MERGE INTO iceberg.${your_dbname}.dim_airlines_scd AS target
 USING (
     -- PART A: New records that don't exist in target
@@ -1343,7 +1344,7 @@ Expected outcome
 View the changed records and see that the VALID_FROM and VALID_TO dates are set
 
 ```sql
--- 5. Check the outcome of the merge operation
+-- 9. Check the outcome of the merge operation
 SELECT
     code,
     description,
@@ -1413,7 +1414,7 @@ When a Redaction policy is active, the engine evaluates the WHERE clause against
 
 ```sql
 
--- targeted query
+-- targeted query with clear-text where clause
 
 select
   complaint_date,
@@ -1769,7 +1770,7 @@ This lineage graph shows the inputs, outputs as well as the processing steps res
 
 The red circle marks the currently selected entity. Atlas will always display the current entity's type in braces next to the entity name (middle, top of the page, e.g. "hive_table"). Clicking on one of the nodes will display a popup menu, which allows us to navigate through the lineage graph.
 
-##  - Geospatial Queries
+##  - Geospatial Queries (only works for HIVE workshops)
 
 Exploring the geospatial functions of Trino that are based on the HIVE_ESRI framework.
 see: https://hive.apache.org/docs/latest/language/hive-udfs/#geospatial
@@ -1867,7 +1868,7 @@ Select correct field names for longitude and latitude and the output should look
 ![](images/geospatial-result-map.png)
 
 
-## Lab  -  Materialized View - WORK IN PROGRESS
+## Lab  -  Materialized View - WORKS ONLY HIVE WORKSHOPS
 
 Query Rewrite Roadmap
 
@@ -2126,7 +2127,7 @@ The output should like this for every 15 minutes window
 | 2023-05-22 10:15:00 |	2023-05-22 10:30:00	| 405 |
 (more rows ... )
 
-##  Data Mart / Cubes
+##  Data Mart / Cubes (works for HIVE workshops)
 
 In earlier Above examples you had two dimensions with origin and dest, now you add a third dimension with the time i.e. year. The data set you start to analyze has become a real cube with three dimensions as here airlinedata as multi dimension cube.
 
@@ -2234,7 +2235,7 @@ where
 order by 1 desc;
 ```
 
-##  Observability
+##  Observability ( NOT SETUP BY DEFAULT)
 
 Observability is important because it continuously gathers and monitors performance data from applications and infrastructure components.
 
@@ -2255,7 +2256,7 @@ Now you can start exploring the dashboard.
 ||
 | :- |
 
-### Hive Compaction
+### Hive Compaction (ONLY HIVE WORKSHOPS)
 
 Hive compaction is a ‘subsystem’ within Hive to implement the most critical type of ACID housekeeping task: merging the delta changes together to reduce the read-path overhead of reading current state from across multiple deltas.
 
@@ -2330,7 +2331,7 @@ Compaction does helps with the small file problem as it eliminates the deltas an
 Compaction does NOT reduce the number of base buckets for the table/partition and the rows don’t move between buckets (which can lead to unbalanced data skew in the bucket files). A full table rewrites would solve this issue.
 
 
-### HPLSQL - Database Applications
+### HPLSQL - Database Applications - ONLY HIVE WORKSHOPS
 
 
 This HPLSQL Package run a analyse by airport and list the top delayed flights in one single field (denormalized).
@@ -2623,7 +2624,7 @@ Result
 | WARD    | SALES       | SALESMAN   | 7521   | 1996-03-26  | CHICAGO   |
 
 
-### Data Sketches
+### Data Sketches (HIVE Workshops)
 
 You can use Datasketch algorithms for queries that take too long to calculate exact results due to very large data sets (e.g. number of distinct values).
 
@@ -2750,7 +2751,7 @@ Results
 
 
 
-### Cryptographic Functions
+### Cryptographic Functions HIVE WORKSHOPS
 
 Hive has support for AES functions to encrypt or decrypt individual columns.
 
