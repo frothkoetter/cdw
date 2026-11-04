@@ -251,7 +251,6 @@ Run “CREATE TABLE AS SELECT” queries to create full features ICEBERG v2 type
 /*
 ** Iceberg Tables
 */
-
 -- 1. airlines create Iceberg table
 DROP TABLE IF EXISTS iceberg.${your_dbname}.dim_airlines;
 CREATE TABLE iceberg.${your_dbname}.dim_airlines
@@ -1043,7 +1042,6 @@ Lets change the partition schema to YEAR & MONTH & DAYOFMONTH and insert data of
 /*
 ** Partition Evolution
 */
-
 
 -- 1. Trino uses the ALTER TABLE SET PROPERTIES syntax for Iceberg evolution
 ALTER TABLE iceberg.${your_dbname}.fct_flights_history_lab
